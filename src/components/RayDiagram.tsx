@@ -47,28 +47,31 @@ export function RayDiagram({ model, size }: Props) {
       ctx.lineTo(gOut.lightBottom.x, gOut.lightBottom.y);
       ctx.closePath();
       ctx.clip();
-
-      const beamDist = gOut.shadowWallX - gOut.lightTop.x;
-      const radialGrad = ctx.createRadialGradient(gOut.lightTop.x, 0, 0, gOut.lightTop.x, 0, beamDist * 1.5);
-      radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-      radialGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
-      radialGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = radialGrad;
-      ctx.fillRect(gOut.lightTop.x, -beamEdgeY, beamDist, beamEdgeY * 2);
       ctx.restore();
 
-      model.rings.forEach((ring) => {
-        if (!ring.geometry)
-          return;
-        const g = ring.geometry;
-        ctx.fillStyle = `rgba(0, 0, 0, 0.12)`;
-        ctx.beginPath();
-        ctx.moveTo(g.shadowWallX, g.penumbraTopY);
-        ctx.lineTo(g.shadowWallX, g.penumbraBottomY);
-        ctx.lineTo(g.penumbraBottomPoint.x, g.penumbraBottomPoint.y);
-        ctx.lineTo(g.penumbraTopPoint.x, g.penumbraTopPoint.y);
-        ctx.fill();
-      });
+      /// GEMINI HERE!!!
+
+      // const beamDist = gOut.shadowWallX - gOut.lightTop.x;
+      // const radialGrad = ctx.createRadialGradient(gOut.lightTop.x, 0, 0, gOut.lightTop.x, 0, beamDist * 1.5);
+      // radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+      // radialGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+      // radialGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      // ctx.fillStyle = radialGrad;
+      // ctx.fillRect(gOut.lightTop.x, -beamEdgeY, beamDist, beamEdgeY * 2);
+      // ctx.restore();
+
+      // model.rings.forEach((ring) => {
+      //   if (!ring.geometry)
+      //     return;
+      //   const g = ring.geometry;
+      //   ctx.fillStyle = `rgba(0, 0, 0, 0.12)`;
+      //   ctx.beginPath();
+      //   ctx.moveTo(g.shadowWallX, g.penumbraTopY);
+      //   ctx.lineTo(g.shadowWallX, g.penumbraBottomY);
+      //   ctx.lineTo(g.penumbraBottomPoint.x, g.penumbraBottomPoint.y);
+      //   ctx.lineTo(g.penumbraTopPoint.x, g.penumbraTopPoint.y);
+      //   ctx.fill();
+      // });
 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = 1 / pxPerCm;
