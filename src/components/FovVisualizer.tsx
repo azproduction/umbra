@@ -34,7 +34,7 @@ export function FovVisualizer({ rings }: Props) {
           <div
             key={r.ringIndex}
             className="bg-white absolute rounded-full mix-blend-screen"
-            style={{ width: `${Math.max(2, r.angleDegNum * pixelsPerDegree)}px`, height: `${Math.max(2, r.angleDegNum * pixelsPerDegree)}px`, opacity: 0.20 }}
+            style={{ width: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`, height: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`, opacity: 0.20 }}
           />
         ))}
       </div>

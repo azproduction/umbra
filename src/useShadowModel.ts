@@ -4,8 +4,8 @@ import { getIntersection, getTangents, getWallY } from './geometry';
 
 export function useShadowModel(size: number, dist: number, distribution: number, beamAngle: number) {
   return useMemo(() => {
-    const subR = 20;
-    const wallX = 200;
+    const subjectRadius = 20;
+    const shadowWallX = 200;
     const lightX = -dist;
     const dFactor = distribution / 100;
 
@@ -38,14 +38,14 @@ export function useShadowModel(size: number, dist: number, distribution: number,
 
       const geoAngleRad = 2 * Math.atan(halfSize / dist);
       const effectiveAngleRad = Math.min(geoAngleRad, (safeBeamAngle * Math.PI) / 180);
-      const angleDegNum = effectiveAngleRad * 180 / Math.PI;
+      const angleDegrees = effectiveAngleRad * 180 / Math.PI;
       const fovRatio = Math.min(effectiveAngleRad / Math.PI, 1);
 
-      const L_top = { x: lightX, y: -halfSize };
-      const L_bot = { x: lightX, y: halfSize };
+      const lightTop = { x: lightX, y: -halfSize };
+      const lightBottom = { x: lightX, y: halfSize };
 
-      const topT = getTangents(L_top.x, L_top.y, 0, 0, subR);
-      const botT = getTangents(L_bot.x, L_bot.y, 0, 0, subR);
+      const topT = getTangents(lightTop.x, lightTop.y, 0, 0, subjectRadius);
+      const botT = getTangents(lightBottom.x, lightBottom.y, 0, 0, subjectRadius);
 
       if (topT && botT) {
         const checkBeam = (pStart: { x: number, y: number }, pEnd: { x: number, y: number }) => {
@@ -53,43 +53,43 @@ export function useShadowModel(size: number, dist: number, distribution: number,
           return angle <= beamHalfRad;
         };
 
-        const u_top_pt = topT.upper;
-        const p_bot_pt = topT.lower;
-        const p_top_pt = botT.upper;
-        const u_bot_pt = botT.lower;
+        const umbraTopPoint = topT.upper;
+        const penumbraBottomPoint = topT.lower;
+        const penumbraTopPoint = botT.upper;
+        const umbraBottomPoint = botT.lower;
 
-        const beamLimitY = halfSize + Math.tan(beamHalfRad) * (wallX - lightX);
-        const penumbraTopY = Math.max(-beamLimitY, getWallY(L_bot, p_top_pt, wallX));
-        const penumbraBotY = Math.min(beamLimitY, getWallY(L_top, p_bot_pt, wallX));
-        const umbraTopY = Math.max(-beamLimitY, getWallY(L_top, u_top_pt, wallX));
-        const umbraBotY = Math.min(beamLimitY, getWallY(L_bot, u_bot_pt, wallX));
+        const beamLimitY = halfSize + Math.tan(beamHalfRad) * (shadowWallX - lightX);
+        const penumbraTopY = Math.max(-beamLimitY, getWallY(lightBottom, penumbraTopPoint, shadowWallX));
+        const penumbraBottomY = Math.min(beamLimitY, getWallY(lightTop, penumbraBottomPoint, shadowWallX));
+        const umbraTopY = Math.max(-beamLimitY, getWallY(lightTop, umbraTopPoint, shadowWallX));
+        const umbraBottomY = Math.min(beamLimitY, getWallY(lightBottom, umbraBottomPoint, shadowWallX));
 
-        const cross = getIntersection(L_top, u_top_pt, L_bot, u_bot_pt);
-        const isRingAntumbra = !!(cross && cross.x > 0 && cross.x < wallX && halfSize > subR);
+        const cross = getIntersection(lightTop, umbraTopPoint, lightBottom, umbraBottomPoint);
+        const isRingAntumbra = !!(cross && cross.x > 0 && cross.x < shadowWallX && halfSize > subjectRadius);
 
         const geometry = {
-          L_top,
-          L_bot,
-          subR,
-          wallX,
-          u_top_pt,
-          p_bot_pt,
-          p_top_pt,
-          u_bot_pt,
+          lightTop,
+          lightBottom,
+          subjectRadius,
+          shadowWallX,
+          umbraTopPoint,
+          penumbraBottomPoint,
+          penumbraTopPoint,
+          umbraBottomPoint,
           penumbraTopY,
-          penumbraBotY,
+          penumbraBottomY,
           umbraTopY,
-          umbraBotY,
+          umbraBottomY,
           cross,
           beamLimitY,
-          topRayActive: checkBeam(L_bot, p_top_pt),
-          botRayActive: checkBeam(L_top, p_bot_pt),
-          uTopRayActive: checkBeam(L_top, u_top_pt),
-          uBotRayActive: checkBeam(L_bot, u_bot_pt),
+          topRayActive: checkBeam(lightBottom, penumbraTopPoint),
+          bottomRayActive: checkBeam(lightTop, penumbraBottomPoint),
+          umbraTopRayActive: checkBeam(lightTop, umbraTopPoint),
+          umbraBottomRayActive: checkBeam(lightBottom, umbraBottomPoint),
         };
 
-        const s = Math.max(0, penumbraBotY - penumbraTopY);
-        const core = Math.max(0, Math.abs(umbraBotY - umbraTopY));
+        const s = Math.max(0, penumbraBottomY - penumbraTopY);
+        const core = Math.max(0, Math.abs(umbraBottomY - umbraTopY));
         let left = 0;
         let right = 0;
 
@@ -101,18 +101,18 @@ export function useShadowModel(size: number, dist: number, distribution: number,
           }
           else {
             left = Math.max(0, umbraTopY - penumbraTopY);
-            right = Math.max(0, penumbraBotY - umbraBotY);
+            right = Math.max(0, penumbraBottomY - umbraBottomY);
           }
           effCoreSum += core * perceptualWeight;
         }
 
         effLeftSum += left * perceptualWeight;
         effRightSum += right * perceptualWeight;
-        rings.push({ ringSize, fovRatio, angleDegNum, geometry, isAntumbra: isRingAntumbra, perceptualWeight, ringIndex: i });
+        rings.push({ ringSize, fovRatio, angleDegrees, geometry, isAntumbra: isRingAntumbra, perceptualWeight, ringIndex: i });
       }
 
       effFovSum += fovRatio * perceptualWeight;
-      effDegSum += angleDegNum * perceptualWeight;
+      effDegSum += angleDegrees * perceptualWeight;
       totalPerceptualWeight += perceptualWeight;
     }
 

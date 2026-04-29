@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "knip": "knip",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "precheck": "npm run lint && npm run knip && tsc -b --noEmit"
   },
   "dependencies": {
     "react": "^19.2.5",
@@ -33,6 +35,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
+    "knip": "^6.9.0",
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",

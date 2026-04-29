@@ -1,30 +1,30 @@
-export interface Point { x: number, y: number }
+interface Point { x: number, y: number }
 
-export interface Geometry {
-  L_top: Point
-  L_bot: Point
-  subR: number
-  wallX: number
-  u_top_pt: Point
-  p_bot_pt: Point
-  p_top_pt: Point
-  u_bot_pt: Point
+interface Geometry {
+  lightTop: Point
+  lightBottom: Point
+  subjectRadius: number
+  shadowWallX: number
+  umbraTopPoint: Point
+  penumbraBottomPoint: Point
+  penumbraTopPoint: Point
+  umbraBottomPoint: Point
   penumbraTopY: number
-  penumbraBotY: number
+  penumbraBottomY: number
   umbraTopY: number
-  umbraBotY: number
+  umbraBottomY: number
   cross: Point | null
   beamLimitY: number
   topRayActive: boolean
-  botRayActive: boolean
-  uTopRayActive: boolean
-  uBotRayActive: boolean
+  bottomRayActive: boolean
+  umbraTopRayActive: boolean
+  umbraBottomRayActive: boolean
 }
 
 export interface Ring {
   ringSize: number
   fovRatio: number
-  angleDegNum: number
+  angleDegrees: number
   geometry: Geometry
   isAntumbra: boolean
   perceptualWeight: number

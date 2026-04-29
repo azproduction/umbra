@@ -31,17 +31,17 @@ export function ShadowWidths({ rings, outerRing, effectiveLeftW, effectiveCoreW,
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, w, h);
-      const center = (gOut.penumbraBotY + gOut.penumbraTopY) / 2;
-      const spread = Math.abs(gOut.penumbraBotY - gOut.penumbraTopY);
+      const center = (gOut.penumbraBottomY + gOut.penumbraTopY) / 2;
+      const spread = Math.abs(gOut.penumbraBottomY - gOut.penumbraTopY);
       const scale = w / (Math.max(spread, 100) * 1.1);
       rings.forEach((ring) => {
         const g = ring.geometry;
         if (!g)
           return;
         const p1 = (g.penumbraTopY - center) * scale + w / 2;
-        const p4 = (g.penumbraBotY - center) * scale + w / 2;
+        const p4 = (g.penumbraBottomY - center) * scale + w / 2;
         const u1 = (g.umbraTopY - center) * scale + w / 2;
-        const u2 = (g.umbraBotY - center) * scale + w / 2;
+        const u2 = (g.umbraBottomY - center) * scale + w / 2;
         const wGrad = p4 - p1;
         if (wGrad < 0.1 || !Number.isFinite(p1) || !Number.isFinite(p4))
           return;

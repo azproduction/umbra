@@ -38,25 +38,25 @@ export function RayDiagram({ model, size }: Props) {
 
       const gOut = model.outerRing.geometry;
       const beamRad = (model.safeBeamAngle / 2) * (Math.PI / 180);
-      const beamDist = gOut.wallX - gOut.L_top.x;
-      const hSource = Math.abs(gOut.L_top.y);
+      const beamDist = gOut.shadowWallX - gOut.lightTop.x;
+      const hSource = Math.abs(gOut.lightTop.y);
       const beamEdgeY = hSource + Math.tan(beamRad) * beamDist;
 
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(gOut.L_top.x, gOut.L_top.y);
-      ctx.lineTo(gOut.wallX, -beamEdgeY);
-      ctx.lineTo(gOut.wallX, beamEdgeY);
-      ctx.lineTo(gOut.L_bot.x, gOut.L_bot.y);
+      ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
+      ctx.lineTo(gOut.shadowWallX, -beamEdgeY);
+      ctx.lineTo(gOut.shadowWallX, beamEdgeY);
+      ctx.lineTo(gOut.lightBottom.x, gOut.lightBottom.y);
       ctx.closePath();
       ctx.clip();
 
-      const radialGrad = ctx.createRadialGradient(gOut.L_top.x, 0, 0, gOut.L_top.x, 0, beamDist * 1.5);
+      const radialGrad = ctx.createRadialGradient(gOut.lightTop.x, 0, 0, gOut.lightTop.x, 0, beamDist * 1.5);
       radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
       radialGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
       radialGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = radialGrad;
-      ctx.fillRect(gOut.L_top.x, -beamEdgeY, beamDist, beamEdgeY * 2);
+      ctx.fillRect(gOut.lightTop.x, -beamEdgeY, beamDist, beamEdgeY * 2);
       ctx.restore();
 
       model.rings.forEach((ring) => {
@@ -65,10 +65,10 @@ export function RayDiagram({ model, size }: Props) {
         const g = ring.geometry;
         ctx.fillStyle = `rgba(0, 0, 0, 0.12)`;
         ctx.beginPath();
-        ctx.moveTo(g.wallX, g.penumbraTopY);
-        ctx.lineTo(g.wallX, g.penumbraBotY);
-        ctx.lineTo(g.p_bot_pt.x, g.p_bot_pt.y);
-        ctx.lineTo(g.p_top_pt.x, g.p_top_pt.y);
+        ctx.moveTo(g.shadowWallX, g.penumbraTopY);
+        ctx.lineTo(g.shadowWallX, g.penumbraBottomY);
+        ctx.lineTo(g.penumbraBottomPoint.x, g.penumbraBottomPoint.y);
+        ctx.lineTo(g.penumbraTopPoint.x, g.penumbraTopPoint.y);
         ctx.fill();
       });
 
@@ -76,40 +76,40 @@ export function RayDiagram({ model, size }: Props) {
       ctx.lineWidth = 1 / pxPerCm;
       if (gOut.topRayActive) {
         ctx.beginPath();
-        ctx.moveTo(gOut.L_bot.x, gOut.L_bot.y);
-        ctx.lineTo(gOut.wallX, gOut.penumbraTopY);
+        ctx.moveTo(gOut.lightBottom.x, gOut.lightBottom.y);
+        ctx.lineTo(gOut.shadowWallX, gOut.penumbraTopY);
         ctx.stroke();
       }
-      if (gOut.botRayActive) {
+      if (gOut.bottomRayActive) {
         ctx.beginPath();
-        ctx.moveTo(gOut.L_top.x, gOut.L_top.y);
-        ctx.lineTo(gOut.wallX, gOut.penumbraBotY);
+        ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
+        ctx.lineTo(gOut.shadowWallX, gOut.penumbraBottomY);
         ctx.stroke();
       }
-      if (gOut.uTopRayActive) {
+      if (gOut.umbraTopRayActive) {
         ctx.beginPath();
-        ctx.moveTo(gOut.L_top.x, gOut.L_top.y);
-        ctx.lineTo(gOut.wallX, gOut.umbraTopY);
+        ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
+        ctx.lineTo(gOut.shadowWallX, gOut.umbraTopY);
         ctx.stroke();
       }
-      if (gOut.uBotRayActive) {
+      if (gOut.umbraBottomRayActive) {
         ctx.beginPath();
-        ctx.moveTo(gOut.L_bot.x, gOut.L_bot.y);
-        ctx.lineTo(gOut.wallX, gOut.umbraBotY);
+        ctx.moveTo(gOut.lightBottom.x, gOut.lightBottom.y);
+        ctx.lineTo(gOut.shadowWallX, gOut.umbraBottomY);
         ctx.stroke();
       }
 
       ctx.strokeStyle = '#444';
       ctx.lineWidth = 4 / pxPerCm;
       ctx.beginPath();
-      ctx.moveTo(gOut.wallX, -height / (2 * pxPerCm));
-      ctx.lineTo(gOut.wallX, height / (2 * pxPerCm));
+      ctx.moveTo(gOut.shadowWallX, -height / (2 * pxPerCm));
+      ctx.lineTo(gOut.shadowWallX, height / (2 * pxPerCm));
       ctx.stroke();
 
       ctx.fillStyle = '#000';
       ctx.beginPath();
-      ctx.moveTo(gOut.L_top.x, gOut.L_top.y);
-      ctx.quadraticCurveTo(gOut.L_top.x - (size / 2) * 0.7, 0, gOut.L_bot.x, gOut.L_bot.y);
+      ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
+      ctx.quadraticCurveTo(gOut.lightTop.x - (size / 2) * 0.7, 0, gOut.lightBottom.x, gOut.lightBottom.y);
       ctx.fill();
 
       model.rings.forEach((ring) => {
@@ -117,8 +117,8 @@ export function RayDiagram({ model, size }: Props) {
           return;
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.beginPath();
-        ctx.moveTo(ring.geometry.L_top.x, ring.geometry.L_top.y);
-        ctx.lineTo(ring.geometry.L_bot.x, ring.geometry.L_bot.y);
+        ctx.moveTo(ring.geometry.lightTop.x, ring.geometry.lightTop.y);
+        ctx.lineTo(ring.geometry.lightBottom.x, ring.geometry.lightBottom.y);
         ctx.stroke();
       });
 
@@ -136,7 +136,7 @@ export function RayDiagram({ model, size }: Props) {
       ctx.fillStyle = '#fff';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Shadow', gOut.wallX * pxPerCm + 10, 5);
+      ctx.fillText('Shadow', gOut.shadowWallX * pxPerCm + 10, 5);
       ctx.restore();
 
       ctx.restore();
