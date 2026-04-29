@@ -42,6 +42,9 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   let totalPerceptualWeight = 0;
   let antumbraWeight = 0;
 
+  // To simplify the distribution model we break it into 8 perfect modifiers, which decrease in sizes
+  // 100% - they all take full width
+  // 0% - they almost all collapse to the center
   for (let i = 0; i < 8; i++) {
     const t = i / 7;
     const factor = (1 - t) ** exponent;
