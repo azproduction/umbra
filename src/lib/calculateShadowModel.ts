@@ -36,10 +36,12 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   const rings: Ring[] = [];
   let effFovSum = 0;
   let effDegSum = 0;
-  let effCoreSum = 0;
+  let effUmbraCoreSum = 0;
+  let effAntumbraCoreSum = 0;
   let effLeftSum = 0;
   let effRightSum = 0;
   let totalPerceptualWeight = 0;
+  let umbraWeight = 0;
   let antumbraWeight = 0;
 
   // To simplify the distribution model we break it into 8 perfect modifiers, which decrease in sizes
@@ -75,10 +77,16 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
       const umbraBottomPoint = botT.lower;
 
       const beamLimitY = halfSize + Math.tan(beamHalfRad) * (shadowWallX - lightX);
-      const penumbraTopY = Math.max(-beamLimitY, getWallY(lightBottom, penumbraTopPoint, shadowWallX));
-      const penumbraBottomY = Math.min(beamLimitY, getWallY(lightTop, penumbraBottomPoint, shadowWallX));
-      const umbraTopY = Math.max(-beamLimitY, getWallY(lightTop, umbraTopPoint, shadowWallX));
-      const umbraBottomY = Math.min(beamLimitY, getWallY(lightBottom, umbraBottomPoint, shadowWallX));
+
+      const penumbraTopGeoY = getWallY(lightBottom, penumbraTopPoint, shadowWallX);
+      const penumbraBottomGeoY = getWallY(lightTop, penumbraBottomPoint, shadowWallX);
+      const umbraTopGeoY = getWallY(lightTop, umbraTopPoint, shadowWallX);
+      const umbraBottomGeoY = getWallY(lightBottom, umbraBottomPoint, shadowWallX);
+
+      const penumbraTopY = Math.max(-beamLimitY, penumbraTopGeoY);
+      const penumbraBottomY = Math.min(beamLimitY, penumbraBottomGeoY);
+      const umbraTopY = Math.max(-beamLimitY, umbraTopGeoY);
+      const umbraBottomY = Math.min(beamLimitY, umbraBottomGeoY);
 
       const cross = getIntersection(lightTop, umbraTopPoint, lightBottom, umbraBottomPoint);
       const isRingAntumbra = !!(cross && cross.x > 0 && cross.x < shadowWallX && halfSize > subjectRadius);
@@ -96,6 +104,12 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
         penumbraBottomY,
         umbraTopY,
         umbraBottomY,
+        penumbraTopGeoY,
+        penumbraBottomGeoY,
+        umbraTopGeoY,
+        umbraBottomGeoY,
+        beamClipsShadow: penumbraTopY !== penumbraTopGeoY || penumbraBottomY !== penumbraBottomGeoY
+          || umbraTopY !== umbraTopGeoY || umbraBottomY !== umbraBottomGeoY,
         cross,
         beamLimitY,
         topRayActive: checkBeam(lightBottom, penumbraTopPoint),
@@ -114,12 +128,14 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
           left = (s - core) / 2;
           right = left;
           antumbraWeight += perceptualWeight;
+          effAntumbraCoreSum += core * perceptualWeight;
         }
         else {
           left = Math.max(0, umbraTopY - penumbraTopY);
           right = Math.max(0, penumbraBottomY - umbraBottomY);
+          umbraWeight += perceptualWeight;
+          effUmbraCoreSum += core * perceptualWeight;
         }
-        effCoreSum += core * perceptualWeight;
       }
 
       effLeftSum += left * perceptualWeight;
@@ -134,6 +150,9 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
 
   const div = totalPerceptualWeight || 1;
   const dominantIsAntumbra = antumbraWeight > (totalPerceptualWeight / 2);
+  const effectiveCoreW = dominantIsAntumbra
+    ? effAntumbraCoreSum / (antumbraWeight || 1)
+    : effUmbraCoreSum / (umbraWeight || 1);
 
   const getEVAtDistance = (x: number) => {
     if (x <= 5)
@@ -177,7 +196,7 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
     rings,
     effectiveFovRatio,
     effectiveAngleDeg: effDegSum / div,
-    effectiveCoreW: effCoreSum / div,
+    effectiveCoreW,
     effectiveLeftW: effLeftSum / div,
     effectiveRightW: effRightSum / div,
     dominantIsAntumbra,

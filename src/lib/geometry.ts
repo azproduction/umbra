@@ -9,10 +9,17 @@ interface Geometry {
   penumbraBottomPoint: Point
   penumbraTopPoint: Point
   umbraBottomPoint: Point
+  // Beam-clipped Y values — the visible shadow region within the modifier's beam cone
   penumbraTopY: number
   penumbraBottomY: number
   umbraTopY: number
   umbraBottomY: number
+  // Geometric Y values — where the subject's shadow lands on the wall ignoring beam coverage
+  penumbraTopGeoY: number
+  penumbraBottomGeoY: number
+  umbraTopGeoY: number
+  umbraBottomGeoY: number
+  beamClipsShadow: boolean
   cross: Point | null
   beamLimitY: number
   topRayActive: boolean

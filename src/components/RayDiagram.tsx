@@ -75,25 +75,25 @@ export function RayDiagram({ model, size }: Props) {
       if (gOut.topRayActive) {
         ctx.beginPath();
         ctx.moveTo(gOut.lightBottom.x, gOut.lightBottom.y);
-        ctx.lineTo(gOut.shadowWallX, gOut.penumbraTopY);
+        ctx.lineTo(gOut.shadowWallX, gOut.penumbraTopGeoY);
         ctx.stroke();
       }
       if (gOut.bottomRayActive) {
         ctx.beginPath();
         ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
-        ctx.lineTo(gOut.shadowWallX, gOut.penumbraBottomY);
+        ctx.lineTo(gOut.shadowWallX, gOut.penumbraBottomGeoY);
         ctx.stroke();
       }
       if (gOut.umbraTopRayActive) {
         ctx.beginPath();
         ctx.moveTo(gOut.lightTop.x, gOut.lightTop.y);
-        ctx.lineTo(gOut.shadowWallX, gOut.umbraTopY);
+        ctx.lineTo(gOut.shadowWallX, gOut.umbraTopGeoY);
         ctx.stroke();
       }
       if (gOut.umbraBottomRayActive) {
         ctx.beginPath();
         ctx.moveTo(gOut.lightBottom.x, gOut.lightBottom.y);
-        ctx.lineTo(gOut.shadowWallX, gOut.umbraBottomY);
+        ctx.lineTo(gOut.shadowWallX, gOut.umbraBottomGeoY);
         ctx.stroke();
       }
 
@@ -149,7 +149,7 @@ export function RayDiagram({ model, size }: Props) {
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
       <div className="absolute top-6 left-6 pointer-events-none z-10">
         <h1 className="text-2xl font-light tracking-wide text-white drop-shadow-md">Umbra</h1>
-        <p className="text-sm text-gray-300 mt-1 drop-shadow-md">Cosplay Photography Masterclass</p>
+        <p className="text-sm text-gray-300 mt-1 drop-shadow-md">Light Modifier Playground</p>
       </div>
     </div>
   );
