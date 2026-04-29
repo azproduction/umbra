@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LightSettings } from './components/LightSettings';
 import { RayDiagram } from './components/RayDiagram';
 import { SubjectView } from './components/SubjectView';
-import { useShadowModel } from './useShadowModel';
+import { calculateShadowModel } from './lib/calculateShadowModel.ts';
 
 export default function App() {
   const [size, setSize] = useState(150);
@@ -10,7 +10,7 @@ export default function App() {
   const [distribution, setDistribution] = useState(100);
   const [beamAngle, setBeamAngle] = useState(180);
 
-  const model = useShadowModel(size, dist, distribution, beamAngle);
+  const model = useMemo(() => calculateShadowModel(size, dist, distribution, beamAngle), [size, dist, distribution, beamAngle]);
 
   return (
     <div className="h-screen w-screen bg-[#1a1a1a] text-[#e5e5e5] font-sans flex flex-col md:flex-row overflow-hidden">

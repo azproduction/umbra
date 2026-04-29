@@ -1,7 +1,7 @@
-import type { useShadowModel } from '../useShadowModel';
+import type { calculateShadowModel } from '../lib/calculateShadowModel.ts';
 import { useEffect, useRef } from 'react';
 
-type Model = ReturnType<typeof useShadowModel>;
+type Model = ReturnType<typeof calculateShadowModel>;
 
 interface Props {
   model: Model
@@ -37,10 +37,7 @@ export function RayDiagram({ model, size }: Props) {
       ctx.scale(pxPerCm, pxPerCm);
 
       const gOut = model.outerRing.geometry;
-      const beamRad = (model.safeBeamAngle / 2) * (Math.PI / 180);
-      const beamDist = gOut.shadowWallX - gOut.lightTop.x;
-      const hSource = Math.abs(gOut.lightTop.y);
-      const beamEdgeY = hSource + Math.tan(beamRad) * beamDist;
+      const beamEdgeY = gOut.beamLimitY;
 
       ctx.save();
       ctx.beginPath();
@@ -51,6 +48,7 @@ export function RayDiagram({ model, size }: Props) {
       ctx.closePath();
       ctx.clip();
 
+      const beamDist = gOut.shadowWallX - gOut.lightTop.x;
       const radialGrad = ctx.createRadialGradient(gOut.lightTop.x, 0, 0, gOut.lightTop.x, 0, beamDist * 1.5);
       radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
       radialGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');

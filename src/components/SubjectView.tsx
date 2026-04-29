@@ -1,11 +1,11 @@
-import type { useShadowModel } from '../useShadowModel';
+import type { calculateShadowModel } from '../lib/calculateShadowModel.ts';
 import { CatchlightIndicator } from './CatchlightIndicator';
 import { Falloff } from './Falloff';
 import { FovVisualizer } from './FovVisualizer';
 import { ShadowWidths } from './ShadowWidths';
 import { SkinSoftness } from './SkinSoftness';
 
-type Model = ReturnType<typeof useShadowModel>;
+type Model = ReturnType<typeof calculateShadowModel>;
 
 interface Props {
   model: Model

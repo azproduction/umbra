@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getIntersection, getTangents, getWallY } from './geometry';
+import { getIntersection, getTangents, getWallY } from './geometry.ts';
 
 describe('getTangents', () => {
   it('returns null when point is inside the circle', () => {

@@ -1,4 +1,4 @@
-import type { Ring } from '../geometry';
+import type { Ring } from '../lib/geometry.ts';
 import { useEffect, useRef } from 'react';
 
 interface Props {
