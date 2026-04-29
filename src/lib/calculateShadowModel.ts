@@ -155,9 +155,9 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
 
   const falloffData = [
     { label: '-50cm', dist: dist - 70, ev: getEVAtDistance(dist - 70) },
-    { label: 'Front', dist: dist - 20, ev: getEVAtDistance(dist - 20) },
-    { label: 'Mid', dist, ev: getEVAtDistance(dist) },
-    { label: 'End', dist: dist + 20, ev: getEVAtDistance(dist + 20) },
+    { label: 'Face', dist: dist - 20, ev: getEVAtDistance(dist - 20) },
+    { label: 'Center', dist, ev: getEVAtDistance(dist) },
+    { label: 'Back', dist: dist + 20, ev: getEVAtDistance(dist + 20) },
     { label: '+50cm', dist: dist + 70, ev: getEVAtDistance(dist + 70) },
   ];
 

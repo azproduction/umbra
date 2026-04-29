@@ -26,7 +26,7 @@ export function FovVisualizer({ rings }: Props) {
     <div className="space-y-2">
       <div className="flex justify-between items-end">
         <label className="text-sm text-gray-300">Subject Field of View</label>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">180&deg; H / 140&deg; V</span>
+        <span className="text-[10px] text-gray-400 uppercase tracking-wider">180&deg; H / 140&deg; V</span>
       </div>
       <div ref={containerRef} className="w-full h-24 bg-[#0a0a0a] border border-gray-700 rounded-lg relative overflow-hidden flex items-center justify-center shadow-inner">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)', backgroundSize: '20px 20px', backgroundPosition: 'center center' }}></div>

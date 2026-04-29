@@ -29,8 +29,10 @@ export function Falloff({ falloffData }: Props) {
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
       const grad = ctx.createLinearGradient(0, 0, w, 0);
+      // TODO(claude) Gradient should reflect the actual transition; Move to the model
+      // TODO(claude) Also umbrella gradient should follow inverse square root of light
       grad.addColorStop(0, '#1a1a1a');
-      grad.addColorStop(1, '#050505');
+      grad.addColorStop(1, '#0F0F0F');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
@@ -62,7 +64,8 @@ export function Falloff({ falloffData }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-end mb-1">
-        <label className="text-sm text-gray-300">Light Falloff (Relative)</label>
+        <label className="text-sm text-gray-300">Light Falloff</label>
+        <span className="text-[10px] text-gray-400 uppercase tracking-wider">EV, Relative</span>
       </div>
       <div className="w-full bg-[#111] rounded-lg border border-gray-700 shadow-inner overflow-hidden">
         <canvas ref={canvasRef} className="w-full h-20 bg-[#0a0a0a] block" />
