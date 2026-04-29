@@ -1,6 +1,12 @@
 import type { Ring } from './geometry.ts';
 import { getIntersection, getTangents, getWallY } from './geometry.ts';
 
+/**
+ * @param size Diameter of the light source
+ * @param dist Distance from the edge of the light source to the model center
+ * @param distribution Distribution quality 0 - 100%
+ * @param beamAngle Angle of light spread. Less or more collimated. 180 - typical umbrella or softbox. 10 - stage projector.
+ */
 export function calculateShadowModel(size: number, dist: number, distribution: number, beamAngle: number) {
   const subjectRadius = 20;
   const shadowWallX = 200;
