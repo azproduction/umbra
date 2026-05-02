@@ -9,6 +9,7 @@ export default function App() {
   const [dist, setDist] = useState(150);
   const [distribution, setDistribution] = useState(100);
   const [beamAngle, setBeamAngle] = useState(180);
+  const [iso, onIso] = useState(400);
 
   const model = useMemo(() => calculateShadowModel(size, dist, distribution, beamAngle), [size, dist, distribution, beamAngle]);
 
@@ -23,17 +24,25 @@ export default function App() {
                 .glass-panel { background: rgba(30, 30, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); }
             `}
       </style>
-      <RayDiagram model={model} size={size} />
+      <RayDiagram
+        model={model}
+        size={size}
+        dist={dist}
+        beamAngle={beamAngle}
+        exposure={iso / 10}
+      />
       <div className="w-full md:w-80 glass-panel p-6 flex flex-col gap-6 z-10 shadow-2xl overflow-y-auto">
         <LightSettings
           size={size}
           dist={dist}
           distribution={distribution}
           beamAngle={beamAngle}
+          iso={iso}
           onSize={setSize}
           onDist={setDist}
           onDistribution={setDistribution}
           onBeamAngle={setBeamAngle}
+          onIso={onIso}
         />
         <SubjectView model={model} />
       </div>

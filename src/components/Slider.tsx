@@ -3,11 +3,12 @@ interface SliderProps {
   value: number
   min: number
   max: number
+  step?: number
   unit: string
   onChange: (value: number) => void
 }
 
-export function Slider({ label, value, min, max, unit, onChange }: SliderProps) {
+export function Slider({ label, value, min, max, unit, step, onChange }: SliderProps) {
   return (
     <div className="space-y-2">
       <div className="flex justify-between">
@@ -22,6 +23,7 @@ export function Slider({ label, value, min, max, unit, onChange }: SliderProps) 
         min={min}
         max={max}
         value={value}
+        step={step ?? 1}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full"
       />

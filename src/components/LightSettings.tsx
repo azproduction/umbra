@@ -5,13 +5,15 @@ interface Props {
   dist: number
   distribution: number
   beamAngle: number
+  iso: number
   onSize: (v: number) => void
   onDist: (v: number) => void
   onDistribution: (v: number) => void
   onBeamAngle: (v: number) => void
+  onIso: (v: number) => void
 }
 
-export function LightSettings({ size, dist, distribution, beamAngle, onSize, onDist, onDistribution, onBeamAngle }: Props) {
+export function LightSettings({ size, dist, distribution, beamAngle, iso, onSize, onDist, onDistribution, onBeamAngle, onIso }: Props) {
   return (
     <div className="space-y-5">
       <h2 className="text-lg font-medium text-white">Light Settings</h2>
@@ -19,6 +21,7 @@ export function LightSettings({ size, dist, distribution, beamAngle, onSize, onD
       <Slider label="Distance to Subject" value={dist} min={50} max={600} unit="cm" onChange={onDist} />
       <Slider label="Surface Distribution" value={distribution} min={0} max={100} unit="%" onChange={onDistribution} />
       <Slider label="Beam Angle (Grid)" value={beamAngle} min={10} max={180} unit="°" onChange={onBeamAngle} />
+      <Slider label="Gain (ISO)" value={iso} min={0} max={1600} step={100} unit="" onChange={onIso} />
     </div>
   );
 }
