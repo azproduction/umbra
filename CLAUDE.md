@@ -7,34 +7,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev       # start dev server with HMR
 npm run build     # type-check then bundle (tsc -b && vite build)
+npm run test      # run vitest (geometry unit tests)
 npm run lint      # ESLint
+npm run knip      # dead-code / unused-export detection
+npm run precheck  # lint + knip + tsc (run before committing)
 npm run preview   # preview production build locally
 ```
 
-There is no test suite configured.
-
 ## Architecture
 
-Single-component React app (`src/App.tsx`) — a cosplay photography masterclass tool for visualising how light modifier size, distance, surface distribution, and beam angle affect shadow softness, catchlights, and light falloff.
+A cosplay photography masterclass tool for visualising how light modifier size, distance, surface distribution, and beam angle affect shadow softness, catchlights, and light falloff.
 
-**State → model → canvases pipeline:**
+**Data flow:**
 
-1. Four `useState` sliders (`size`, `dist`, `distribution`, `beamAngle`) feed a `useMemo` that runs all geometry — tangent lines, umbra/antumbra/penumbra extents across 8 concentric rings, EV falloff curve, and perceptual weighting. The result is the `model` object.
+```
+useState sliders (App.tsx)
+  → calculateShadowModel() [src/lib/calculateShadowModel.ts]
+      → geometry helpers  [src/lib/geometry.ts]
+  → model object passed as props
+      → RayDiagram        [canvas: 2-D ray diagram]
+      → SubjectView       [aggregates the four readout panels]
+          → CatchlightIndicator
+          → FovVisualizer
+          → SkinSoftness
+          → ShadowWidths
+          → Falloff
+```
 
-2. Four `useEffect` hooks each own one `<canvas>` ref and re-draw whenever the relevant slice of `model` changes:
-   - `mainCanvasRef` — 2-D ray diagram (light source → subject sphere → shadow wall)
-   - `profileCanvasRef` — horizontal shadow width profile
-   - `falloffCanvasRef` — relative EV values at 5 distances
-   - `skinCanvasRef` — perceived skin softness texture
+`App.tsx` holds all state and calls `calculateShadowModel` inside a `useMemo`. The result (`model`) is the single source of truth passed down. No context or global state.
 
-All canvas drawing is manual 2-D context calls; no drawing library is used.
+**`calculateShadowModel`** decomposes the light source into 8 concentric rings with decreasing size (controlled by the `distribution` exponent). For each ring it: computes tangent lines from the ring edge to the subject sphere, determines umbra/penumbra/antumbra extents on the shadow wall, clips them against the beam cone, and accumulates perceptually-weighted sums. Returns a `Ring[]` array plus derived scalars (`effectiveFovRatio`, `textureDesc`, `falloffData`, etc.).
 
-**Key geometry helpers** (top of `App.tsx`, no explicit types):
+**Geometry helpers** (`src/lib/geometry.ts`, fully typed):
+- `getTangents` — outer tangent points from a point to a circle
+- `getIntersection` — line–line intersection (antumbra cross detection)
+- `getWallY` — projects a ray onto the shadow wall at a given x
 
-- `getTangents` — outer tangent points from a point light to a circular occluder
-- `getIntersection` — line–line intersection for antumbra cross detection
-- `getWallY` — projects a ray onto the shadow wall
+**`RayDiagram`** receives `model`, `size`, `dist`, `beamAngle`, and `exposure` (iso/10). It owns a `<canvas>` and redraws via `useEffect` when these change. All canvas drawing is raw 2-D context calls.
 
-**Styling:** Tailwind utility classes via CDN (no config file). Custom `<style>` block in JSX for range-input track/thumb overrides. Dark theme throughout (`#1a1a1a` background).
+**Styling:** Tailwind v4 via `@tailwindcss/vite` (no separate config file). Custom `<style>` block in `App.tsx` for range-input track/thumb overrides. Dark theme throughout (`#1a1a1a` background).
 
-**React Compiler** is enabled via `@rolldown/plugin-babel` + `babel-plugin-react-compiler` in `vite.config.ts` — avoid manual `useCallback`/`useMemo` optimisations that conflict with it.
+**React Compiler** is enabled via `@rolldown/plugin-babel` + `babel-plugin-react-compiler` — avoid manual `useCallback`/`useMemo` optimisations that conflict with it.
+
+**Tests** live in `src/lib/geometry.test.ts` (Vitest). Only the pure geometry helpers are unit-tested; canvas-drawing components are not.
