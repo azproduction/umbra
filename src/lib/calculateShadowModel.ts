@@ -180,8 +180,12 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
     return Math.log2(e) + EV_CALIBRATION;
   };
 
+  // First measurement point: normally 70cm before center, but never behind
+  // the modifier — stay at least 20cm from the modifier surface.
+  const firstX = Math.max(20, dist - 70);
+
   const falloffData = [
-    { label: '-50cm', dist: dist - 70 },
+    { label: `-${dist - firstX}cm`, dist: firstX },
     { label: 'Face', dist: dist - 20 },
     { label: 'Center', dist },
     { label: 'Back', dist: dist + 20 },
