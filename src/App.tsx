@@ -14,7 +14,7 @@ export default function App() {
   const model = useMemo(() => calculateShadowModel(size, dist, distribution, beamAngle), [size, dist, distribution, beamAngle]);
 
   return (
-    <div className="h-screen w-screen bg-[#1a1a1a] text-[#e5e5e5] font-sans flex flex-col md:flex-row overflow-hidden">
+    <div className="h-screen w-screen bg-[#1a1a1a] text-[#e5e5e5] font-sans flex flex-row overflow-hidden">
       <style>
         {`
                 input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
@@ -24,15 +24,26 @@ export default function App() {
                 .glass-panel { background: rgba(30, 30, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); }
             `}
       </style>
-      <RayDiagram
-        model={model}
-        size={size}
-        dist={dist}
-        beamAngle={beamAngle}
-        distribution={distribution}
-        exposure={iso / 10}
-      />
-      <div className="w-full md:w-80 glass-panel p-6 flex flex-col gap-6 z-10 shadow-2xl overflow-y-auto">
+
+      {/* Canvas fills remaining space */}
+      <div className="flex-1 relative">
+        <RayDiagram
+          model={model}
+          size={size}
+          dist={dist}
+          beamAngle={beamAngle}
+          distribution={distribution}
+          exposure={iso / 10}
+        />
+
+        {/* Subject View widgets float over the canvas, no background */}
+        <div className="absolute top-4 left-4 w-64 z-10 overflow-y-auto max-h-[calc(100vh-5rem)] pointer-events-none">
+          <SubjectView model={model} distribution={distribution} />
+        </div>
+      </div>
+
+      {/* Right panel — fixed, same as before */}
+      <div className="w-80 glass-panel p-6 flex flex-col gap-6 z-10 shadow-2xl overflow-y-auto">
         <LightSettings
           size={size}
           dist={dist}
@@ -45,7 +56,6 @@ export default function App() {
           onBeamAngle={setBeamAngle}
           onIso={onIso}
         />
-        <SubjectView model={model} distribution={distribution} />
       </div>
     </div>
   );

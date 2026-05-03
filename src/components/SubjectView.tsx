@@ -15,7 +15,6 @@ interface Props {
 export function SubjectView({ model, distribution }: Props) {
   return (
     <div className="space-y-5 mt-2">
-      <h2 className="text-lg font-medium text-white">Subject View</h2>
       <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} distribution={distribution} />
       <FovVisualizer rings={model.rings} distribution={distribution} />
       <SkinSoftness effectiveFovRatio={model.effectiveFovRatio} textureDesc={model.textureDesc} />

@@ -156,7 +156,7 @@ export function RayDiagram({ model, size, dist, beamAngle, distribution, exposur
   }, [model, size]);
 
   return (
-    <div className="flex-1 relative h-full w-full">
+    <div className="absolute inset-0">
       <LightFieldRenderer
         modifierSize={size}
         distSubject={dist}
@@ -168,10 +168,6 @@ export function RayDiagram({ model, size, dist, beamAngle, distribution, exposur
         wallOffsetRight={100}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
-      <div className="absolute top-6 left-6 pointer-events-none z-10">
-        <h1 className="text-2xl font-light tracking-wide text-white drop-shadow-md">Umbra</h1>
-        <p className="text-sm text-gray-300 mt-1 drop-shadow-md">Light Modifier Playground</p>
-      </div>
     </div>
   );
 }
