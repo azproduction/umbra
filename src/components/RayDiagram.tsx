@@ -34,14 +34,13 @@ export function RayDiagram({ model, size, dist, beamAngle, distribution, exposur
       if (!model.outerRing?.geometry)
         return;
       const pxPerCm = width / 1000;
-      const cx = width * 0.90 - (200 * pxPerCm);
+      const gOut = model.outerRing.geometry;
+      const cx = width - gOut.shadowWallX * pxPerCm;
       const cy = height / 2;
 
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(pxPerCm, pxPerCm);
-
-      const gOut = model.outerRing.geometry;
       const beamEdgeY = gOut.beamLimitY;
 
       ctx.save();
@@ -142,10 +141,6 @@ export function RayDiagram({ model, size, dist, beamAngle, distribution, exposur
       ctx.font = '12px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Model', 0, 4);
-      ctx.fillStyle = '#fff';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('Wall', gOut.shadowWallX * pxPerCm + 10, 5);
       ctx.restore();
 
       ctx.restore();
@@ -165,7 +160,7 @@ export function RayDiagram({ model, size, dist, beamAngle, distribution, exposur
         beamAngle={beamAngle}
         exposure={exposure}
         distribution={distribution / 100}
-        wallOffsetRight={100}
+        wallOffsetRight={0}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
     </div>

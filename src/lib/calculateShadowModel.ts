@@ -195,14 +195,14 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   const effectiveFovRatio = effFovSum / div;
   const textureDesc
     = effectiveFovRatio > 0.5
-      ? 'Extremely Soft'
+      ? 'Extr. Soft'
       : effectiveFovRatio > 0.25
         ? 'Very Soft'
         : effectiveFovRatio > 0.08
           ? 'Soft'
           : effectiveFovRatio > 0.03
             ? 'Hard'
-            : 'Extremely Hard';
+            : 'Extr. Hard';
 
   return {
     rings,
