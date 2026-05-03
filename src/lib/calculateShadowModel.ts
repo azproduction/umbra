@@ -1,5 +1,17 @@
 import type { Ring } from './geometry.ts';
 import { getIntersection, getTangents, getWallY } from './geometry.ts';
+import { illuminance } from './physics.ts';
+
+// Calibrate physics to photographer's EV scale.
+// At default settings (150 cm modifier, 150 cm to subject, 100% distribution,
+// 180° beam) the on-axis illuminance maps to EV 15 (sunny-day exposure).
+const _refIlluminance = illuminance({
+  receiver: { x: 150, y: 0, z: 0 },
+  modifierR: 75,
+  distribution: 1,
+  beamHalfAngle: Math.PI / 2,
+});
+const EV_CALIBRATION = 15 - Math.log2(_refIlluminance);
 
 /**
  * @param size         Diameter of the light source (centimeters)
@@ -154,31 +166,27 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
     ? effAntumbraCoreSum / (antumbraWeight || 1)
     : effUmbraCoreSum / (umbraWeight || 1);
 
-  const getEVAtDistance = (x: number) => {
-    if (x <= 5)
-      return 20;
-    let totalIntensity = 0;
-    const falloffExponent = 2 * (beamAngle / 180);
-    const totalRings = 8;
-    const totalPowerPool = totalRings * 4;
-
-    rings.forEach((r, idx) => {
-      const ringPowerFactor = (dFactor * (1 / totalRings)) + ((1 - dFactor) * (idx === 7 ? 1 : 0));
-      const ringIntensity = totalPowerPool * ringPowerFactor;
-      const effectiveX = Math.sqrt(x * x + (r.ringSize / 2) * (r.ringSize / 2));
-      totalIntensity += ringIntensity / (effectiveX / 100) ** falloffExponent;
+  const getEVAtDistance = (x: number): number | null => {
+    if (x <= 0)
+      return null;
+    const e = illuminance({
+      receiver: { x, y: 0, z: 0 },
+      modifierR: size / 2,
+      distribution: dFactor,
+      beamHalfAngle: beamHalfRad,
     });
-
-    return 10 + Math.log2(totalIntensity);
+    if (e < 1e-30)
+      return null;
+    return Math.log2(e) + EV_CALIBRATION;
   };
 
   const falloffData = [
-    { label: '-50cm', dist: dist - 70, ev: getEVAtDistance(dist - 70) },
-    { label: 'Face', dist: dist - 20, ev: getEVAtDistance(dist - 20) },
-    { label: 'Center', dist, ev: getEVAtDistance(dist) },
-    { label: 'Back', dist: dist + 20, ev: getEVAtDistance(dist + 20) },
-    { label: '+50cm', dist: dist + 70, ev: getEVAtDistance(dist + 70) },
-  ];
+    { label: '-50cm', dist: dist - 70 },
+    { label: 'Face', dist: dist - 20 },
+    { label: 'Center', dist },
+    { label: 'Back', dist: dist + 20 },
+    { label: '+50cm', dist: dist + 70 },
+  ].map(p => ({ ...p, ev: getEVAtDistance(p.dist) }));
 
   const effectiveFovRatio = effFovSum / div;
   const textureDesc

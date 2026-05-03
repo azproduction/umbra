@@ -7,7 +7,6 @@ void main() {
 }
 `;
 
-// 2D Lambertian disc integration. Mirrors src/lib/physics.ts — keep in sync.
 const fsSource = `#version 300 es
 precision highp float;
 
@@ -24,41 +23,15 @@ uniform float u_halfBeamRad;
 uniform float u_exposure;
 uniform float u_distribution;
 uniform float u_lightPower;
-uniform int u_M;   // radial samples (set on JS side, scaled with R / tan(β))
-uniform int u_N;   // angular samples (set on JS side, scaled with R / tan(β))
-
-// Compile-time upper bounds. Loops break early at u_M/u_N. Worst case
-// 32×96 = 3072 samples per fragment; typical is 8×16 = 128.
-const int M_MAX = 32;
-const int N_MAX = 96;
-const float PI = 3.14159265358979;
-const float ALPHA_MAX = 10.0;
-const float BEAM_SOFT = 0.01;  // smooth the beam-cone boundary in cos-space to avoid sample-cutoff aliasing
+uniform int u_samples;
 
 out vec4 outColor;
 
-// Normalised radial luminance (disc-average is 1 for any distribution).
 float luminanceL(float rNorm) {
-    float t = 1.0 - clamp(u_distribution, 0.0, 1.0);
-    float alpha = ALPHA_MAX * t;
+    float alpha = 10.0 * (1.0 - clamp(u_distribution, 0.0, 1.0));
     if (alpha < 1e-4) return 1.0;
     float norm = alpha / (1.0 - exp(-alpha));
     return norm * exp(-alpha * rNorm * rNorm);
-}
-
-// Sphere-blocks-segment test for a ray from \`origin\` along \`dir\` hitting
-// \`sphereCenter\` of radius \`sphereRadius\` between t=0 and t=1.
-bool sphereBlocked(vec3 origin, vec3 dir, vec3 sphereCenter, float sphereRadius) {
-    vec3 f = origin - sphereCenter;
-    float a = dot(dir, dir);
-    float b = 2.0 * dot(f, dir);
-    float c = dot(f, f) - sphereRadius * sphereRadius;
-    float disc = b * b - 4.0 * a * c;
-    if (disc < 0.0) return false;
-    float sqrtDisc = sqrt(disc);
-    float t1 = (-b - sqrtDisc) / (2.0 * a);
-    float t2 = (-b + sqrtDisc) / (2.0 * a);
-    return (t1 > 0.0 && t1 < 1.0) || (t2 > 0.0 && t2 < 1.0);
 }
 
 void main() {
@@ -67,7 +40,6 @@ void main() {
     float wx = u_xMin + st.x * u_physicalW;
     float wy = u_yMin + flippedY * u_physicalH;
 
-    // Inside subject (cross-section circle) or behind wall: black.
     float dx_sub = wx - u_distSubject;
     float dy_sub = wy;
     if (dx_sub * dx_sub + dy_sub * dy_sub <= u_subRadius * u_subRadius || wx > u_wallX) {
@@ -76,71 +48,46 @@ void main() {
     }
 
     float R = u_modifierSize * 0.5;
-    float cosBeam = cos(u_halfBeamRad);
-    // Clamp halfBeamRad below π/2 so tan() doesn't blow up at 180° beam.
-    float tanBeam = tan(min(u_halfBeamRad, 1.55));
-    vec3 sphereCenter = vec3(u_distSubject, 0.0, 0.0);
-    vec3 receiver = vec3(wx, wy, 0.0);
-    float sum = 0.0;
+    float sumIntensity = 0.0;
+    float sumWeights = 0.0;
 
-    // Outer rings (i ∈ [1, u_M)). The innermost cell r ∈ [0, R/u_M] is replaced
-    // by an analytical correction below — its 1/d² peak at r=0 is severely
-    // under-sampled by midpoint Riemann at any practical M.
-    for (int i = 1; i < M_MAX; i++) {
-        if (i >= u_M) break;
-        float rNorm = (float(i) + 0.5) / float(u_M);
-        float rs = rNorm * R;
+    for (int i = 0; i < 2048; i++) {
+        if (i >= u_samples) break;
+
+        float ly = -R + (float(i) + 0.5) * 2.0 * R / float(u_samples);
+        float rNorm = abs(ly) / R;
         float L = luminanceL(rNorm);
+        sumWeights += L;
 
-        for (int j = 0; j < N_MAX; j++) {
-            if (j >= u_N) break;
-            // Left-endpoint sampling so j=0 → φ=0 and j=u_N/2 → φ=π give samples
-            // at zs=0 (on the cross-section plane). Anchors the lit region at the
-            // modifier surface for narrow beams. Equivalent to midpoint for periodic
-            // integrands on [0, 2π], so no accuracy loss.
-            float phi = float(j) * 2.0 * PI / float(u_N);
-            vec3 src = vec3(0.0, rs * cos(phi), rs * sin(phi));
-            vec3 dir = receiver - src;
-            float distSq = dot(dir, dir);
-            float dist = sqrt(distSq);
-            float cosTheta = dir.x / dist;
+        float dx = wx;
+        float dy = wy - ly;
+        float distSq = dx * dx + dy * dy;
+        float dist = sqrt(distSq);
+        float cosTheta = dx / dist;
 
-            if (cosTheta <= 0.0) continue;
-            float beamFactor = smoothstep(cosBeam - BEAM_SOFT, cosBeam + BEAM_SOFT, cosTheta);
-            if (beamFactor <= 0.0) continue;
+        if (cosTheta <= 0.0 || acos(cosTheta) > u_halfBeamRad) continue;
 
-            if (!sphereBlocked(src, dir, sphereCenter, u_subRadius)) {
-                sum += L * cosTheta * beamFactor / distSq * rs;
-            }
+        float fX = -u_distSubject;
+        float fY = ly;
+        float a = distSq;
+        float b = 2.0 * (fX * dx + fY * dy);
+        float c = fX * fX + fY * fY - u_subRadius * u_subRadius;
+        float disc = b * b - 4.0 * a * c;
+
+        bool hit = false;
+        if (disc >= 0.0) {
+            float sqrtDisc = sqrt(disc);
+            float t1 = (-b - sqrtDisc) / (2.0 * a);
+            float t2 = (-b + sqrtDisc) / (2.0 * a);
+            if ((t1 > 0.0 && t1 < 1.0) || (t2 > 0.0 && t2 < 1.0)) hit = true;
+        }
+
+        if (!hit) {
+            sumIntensity += L * cosTheta / distSq;
         }
     }
 
-    // Analytical inner correction over r ∈ [0, R/u_M], assuming uniform L = L(0).
-    // The contributing radius is min(rEdge, wallDist·tan β): for narrow beams
-    // close to the modifier, only rs ≤ wallDist·tan β is inside the cone, so
-    // the inner cell is partially clipped. Without this clip the formula
-    // counts the full cell and overcounts wildly near the surface (the
-    // "strong middle beam" artifact).
-    float innerCorr = 0.0;
-    {
-        float rEdge = R / float(u_M);
-        float L_inner = luminanceL(0.5 / float(u_M));
-        float wallDist = max(sqrt(wx * wx + wy * wy), 1e-3);
-        float cosCenter = wx / wallDist;
-        if (cosCenter > 0.0) {
-            float beamCenter = smoothstep(cosBeam - BEAM_SOFT, cosBeam + BEAM_SOFT, cosCenter);
-            if (beamCenter > 0.0) {
-                vec3 dir_in = receiver;
-                if (!sphereBlocked(vec3(0.0), dir_in, sphereCenter, u_subRadius)) {
-                    float rsClip = min(rEdge, wallDist * tanBeam);
-                    float angularFactor = 1.0 - wallDist / sqrt(wallDist * wallDist + rsClip * rsClip);
-                    innerCorr = 2.0 * L_inner * beamCenter * angularFactor / (R * R);
-                }
-            }
-        }
-    }
-
-    float intensity = u_lightPower * (sum * 2.0 / (float(u_M) * float(u_N) * R) + innerCorr);
+    float intensity = sumWeights > 0.0 ? sumIntensity / sumWeights * u_lightPower : 0.0;
     float val = 1.0 - exp(-intensity * u_exposure / 100.0);
     outColor = vec4(val, val, val, 1.0);
 }
@@ -164,35 +111,8 @@ interface GLInfo {
     exposure: WebGLUniformLocation | null
     distribution: WebGLUniformLocation | null
     lightPower: WebGLUniformLocation | null
-    M: WebGLUniformLocation | null
-    N: WebGLUniformLocation | null
+    samples: WebGLUniformLocation | null
   }
-}
-
-const M_MAX = 32;
-const N_MAX = 96;
-const M_MIN = 8;
-const N_MIN = 16;
-// Closest distance from the modifier (in cm) we want to render without
-// individual-emitter aliasing. Below this `wx`, samples may still appear
-// discrete; above, they merge into a continuous field.
-const TARGET_WX = 30;
-
-/**
- * Choose enough disc samples that adjacent ones overlap in the cross-section
- * at distance `TARGET_WX`. The visible-ray spacing on cross-section is
- * dominated by the on-plane samples at `(rs_i, 0)` (one per radial ring at
- * φ=0 and one at φ=π). For their cones of width `2·wx·tan(β)` to overlap by
- * ~5× at `TARGET_WX`, M must be ~`5·R / (2·wx·tan β)` = `2.5·R/(wx·tan β)`.
- * N is sized symmetrically for the rim chord `π·R/N`.
- */
-function chooseSamples(modifierSize: number, beamAngle: number): { M: number, N: number } {
-  const R = modifierSize / 2;
-  const beamHalfRad = (beamAngle / 2) * (Math.PI / 180);
-  const tanBeam = Math.max(Math.tan(beamHalfRad), 1e-3);
-  const M = Math.max(M_MIN, Math.min(M_MAX, Math.ceil(2.5 * R / (TARGET_WX * tanBeam))));
-  const N = Math.max(N_MIN, Math.min(N_MAX, Math.ceil(Math.PI * R / (TARGET_WX * tanBeam))));
-  return { M, N };
 }
 
 interface LightFieldRendererProps {
@@ -280,8 +200,7 @@ export function LightFieldRenderer({
         exposure: gl.getUniformLocation(program, 'u_exposure'),
         distribution: gl.getUniformLocation(program, 'u_distribution'),
         lightPower: gl.getUniformLocation(program, 'u_lightPower'),
-        M: gl.getUniformLocation(program, 'u_M'),
-        N: gl.getUniformLocation(program, 'u_N'),
+        samples: gl.getUniformLocation(program, 'u_samples'),
       },
     };
   }, []);
@@ -314,6 +233,20 @@ export function LightFieldRenderer({
       const subRadius = subjectDiam / 2;
       const halfBeamRad = (beamAngle / 2) * (Math.PI / 180);
 
+      // Dynamic sample count: enough so adjacent sample cones overlap within
+      // 1 screen pixel. Criterion: sampleSpacing / (2·tan β) < 1/scale.
+      // → N > modifierPx / (2·tan β). Capped at 512 for GPU performance.
+      const modifierPx = modifierSize * scale;
+      const tanHalfBeam = Math.max(Math.tan(halfBeamRad), 1e-3);
+      // Two criteria — take the larger:
+      // 1. Cone-overlap: adjacent cones must merge within 1 screen pixel.
+      // 2. Visual floor: at least 1 sample per 3 pixels of modifier width,
+      //    so wide beams (where tan→∞ drives the overlap count to near zero)
+      //    still look smooth.
+      const samplesFromOverlap = modifierPx * 4 / (2 * tanHalfBeam);
+      const samplesFromVisual = modifierPx / 3;
+      const samples = Math.max(16, Math.min(2048, Math.ceil(Math.max(samplesFromOverlap, samplesFromVisual))));
+
       gl.viewport(0, 0, width, height);
       gl.useProgram(program);
 
@@ -329,11 +262,8 @@ export function LightFieldRenderer({
       gl.uniform1f(locs.halfBeamRad, halfBeamRad);
       gl.uniform1f(locs.exposure, exposure);
       gl.uniform1f(locs.distribution, distribution);
-      gl.uniform1f(locs.lightPower, 50000.0);
-
-      const { M, N } = chooseSamples(modifierSize, beamAngle);
-      gl.uniform1i(locs.M, M);
-      gl.uniform1i(locs.N, N);
+      gl.uniform1f(locs.lightPower, 10000.0);
+      gl.uniform1i(locs.samples, samples);
 
       gl.enableVertexAttribArray(locs.position);
       gl.vertexAttribPointer(locs.position, 2, gl.FLOAT, false, 0, 0);

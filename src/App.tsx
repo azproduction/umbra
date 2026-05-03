@@ -45,7 +45,7 @@ export default function App() {
           onBeamAngle={setBeamAngle}
           onIso={onIso}
         />
-        <SubjectView model={model} />
+        <SubjectView model={model} distribution={distribution} />
       </div>
     </div>
   );

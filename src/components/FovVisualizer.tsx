@@ -1,11 +1,13 @@
 import type { Ring } from '../lib/geometry.ts';
 import { useLayoutEffect, useRef, useState } from 'react';
+import { luminance } from '../lib/physics.ts';
 
 interface Props {
   rings: Ring[]
+  distribution: number
 }
 
-export function FovVisualizer({ rings }: Props) {
+export function FovVisualizer({ rings, distribution }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(270);
 
@@ -21,6 +23,10 @@ export function FovVisualizer({ rings }: Props) {
   }, []);
 
   const pixelsPerDegree = containerWidth / 180;
+  const dist = distribution / 100;
+
+  const weights = rings.map(r => luminance((r.ringIndex + 0.5) / 8, dist));
+  const maxWeight = Math.max(...weights, 1e-6);
 
   return (
     <div className="space-y-2">
@@ -30,11 +36,15 @@ export function FovVisualizer({ rings }: Props) {
       </div>
       <div ref={containerRef} className="w-full h-24 bg-[#0a0a0a] border border-gray-700 rounded-lg relative overflow-hidden flex items-center justify-center shadow-inner">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)', backgroundSize: '20px 20px', backgroundPosition: 'center center' }}></div>
-        {rings.map(r => (
+        {rings.map((r, i) => (
           <div
             key={r.ringIndex}
             className="bg-white absolute rounded-full mix-blend-screen"
-            style={{ width: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`, height: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`, opacity: 0.20 }}
+            style={{
+              width: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`,
+              height: `${Math.max(2, r.angleDegrees * pixelsPerDegree)}px`,
+              opacity: (weights[i] / maxWeight) * 0.55,
+            }}
           />
         ))}
       </div>
