@@ -29,6 +29,7 @@ export default function App() {
         size={size}
         dist={dist}
         beamAngle={beamAngle}
+        distribution={distribution}
         exposure={iso / 10}
       />
       <div className="w-full md:w-80 glass-panel p-6 flex flex-col gap-6 z-10 shadow-2xl overflow-y-auto">

@@ -9,23 +9,11 @@ interface Props {
   size: number
   dist: number
   beamAngle: number
+  distribution: number
   exposure: number
 }
 
-type Range = [number, number];
-
-/**
- * Maps a value from range [a, b] to range [c, d]
- */
-function mapRange(
-  value: number,
-  [a, b]: Range,
-  [c, d]: Range,
-): number {
-  return ((value - a) * (d - c)) / (b - a) + c;
-}
-
-export function RayDiagram({ model, size, dist, beamAngle, exposure }: Props) {
+export function RayDiagram({ model, size, dist, beamAngle, distribution, exposure }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -176,7 +164,7 @@ export function RayDiagram({ model, size, dist, beamAngle, exposure }: Props) {
         distWall={200}
         beamAngle={beamAngle}
         exposure={exposure}
-        samples={mapRange(beamAngle, [10, 180], [1024, 128])}
+        distribution={distribution / 100}
         wallOffsetRight={100}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />

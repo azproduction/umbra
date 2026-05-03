@@ -39,6 +39,7 @@ useState sliders (App.tsx)
 **`calculateShadowModel`** decomposes the light source into 8 concentric rings with decreasing size (controlled by the `distribution` exponent). For each ring it: computes tangent lines from the ring edge to the subject sphere, determines umbra/penumbra/antumbra extents on the shadow wall, clips them against the beam cone, and accumulates perceptually-weighted sums. Returns a `Ring[]` array plus derived scalars (`effectiveFovRatio`, `textureDesc`, `falloffData`, etc.).
 
 **Geometry helpers** (`src/lib/geometry.ts`, fully typed):
+
 - `getTangents` — outer tangent points from a point to a circle
 - `getIntersection` — line–line intersection (antumbra cross detection)
 - `getWallY` — projects a ray onto the shadow wall at a given x

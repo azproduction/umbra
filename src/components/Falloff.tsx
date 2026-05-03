@@ -25,7 +25,10 @@ export function Falloff({ falloffData }: Props) {
               <div className="w-px h-2 bg-white/10" />
               <span className="text-[9px] font-bold text-[#888] leading-none">{pt.label}</span>
               <span className="text-[11px] font-bold font-mono text-white leading-none">{pt.ev.toFixed(1)}</span>
-              <span className="text-[9px] font-mono text-[#555] leading-none">{pt.dist.toFixed(0)}cm</span>
+              <span className="text-[9px] font-mono text-[#555] leading-none">
+                {pt.dist.toFixed(0)}
+                cm
+              </span>
             </div>
           ))}
         </div>
