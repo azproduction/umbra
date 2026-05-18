@@ -1,13 +1,11 @@
 import type { Ring } from '../lib/geometry.ts';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { luminance } from '../lib/physics.ts';
 
 interface Props {
   rings: Ring[]
-  distribution: number
 }
 
-export function FovVisualizer({ rings, distribution }: Props) {
+export function FovVisualizer({ rings }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(270);
 
@@ -23,9 +21,8 @@ export function FovVisualizer({ rings, distribution }: Props) {
   }, []);
 
   const pixelsPerDegree = containerWidth / 180;
-  const dist = distribution / 100;
 
-  const weights = rings.map(r => luminance((r.ringIndex + 0.5) / 8, dist));
+  const weights = rings.map(r => r.perceptualWeight);
   const maxWeight = Math.max(...weights, 1e-6);
 
   return (

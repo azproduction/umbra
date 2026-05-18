@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { ALPHA_MAX } from '../lib/physics.ts';
 
 const vsSource = `#version 300 es
 in vec2 a_position;
@@ -28,7 +29,7 @@ uniform int u_samples;
 out vec4 outColor;
 
 float luminanceL(float rNorm) {
-    float alpha = 10.0 * (1.0 - clamp(u_distribution, 0.0, 1.0));
+    float alpha = ${ALPHA_MAX} * (1.0 - clamp(u_distribution, 0.0, 1.0)); // ALPHA_MAX, injected from physics.ts
     if (alpha < 1e-4) return 1.0;
     float norm = alpha / (1.0 - exp(-alpha));
     return norm * exp(-alpha * rNorm * rNorm);

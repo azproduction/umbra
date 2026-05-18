@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alphaFromDistribution, illuminance, luminance } from './physics.ts';
+import { alphaFromDistribution, illuminance, luminance, MAX_CONTRAST_STOPS } from './physics.ts';
 
 describe('luminance', () => {
   it('is uniform when distribution=1', () => {
@@ -8,11 +8,12 @@ describe('luminance', () => {
     expect(luminance(1, 1)).toBeCloseTo(1, 6);
   });
 
-  it('peaks sharply at the centre when distribution=0', () => {
+  it('peaks at the centre when distribution=0, capped at MAX_CONTRAST_STOPS edge-to-centre', () => {
     const center = luminance(0, 0);
     const edge = luminance(1, 0);
     expect(center).toBeGreaterThan(1);
-    expect(edge).toBeLessThan(0.01);
+    expect(edge).toBeLessThan(1);
+    expect(Math.log2(center / edge)).toBeCloseTo(MAX_CONTRAST_STOPS, 6);
   });
 
   it('disc-average is 1 regardless of distribution', () => {

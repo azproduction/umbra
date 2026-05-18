@@ -9,7 +9,13 @@
 //   - illuminance() returns the disc-averaged value of L·cos(θ)/d², matching
 //     what the shader computes pre-`lightPower` scaling.
 
-const ALPHA_MAX = 10;
+// Single source of truth for peak sharpness: the edge-to-centre luminance contrast
+// of the worst modifier (distribution=0), in photographic stops. Every consumer
+// (the GLSL shader, the intensity chart, tests) derives from this — change it here only.
+export const MAX_CONTRAST_STOPS = 8;
+
+// stops = ALPHA_MAX / ln2, so ALPHA_MAX = stops · ln2.
+export const ALPHA_MAX = MAX_CONTRAST_STOPS * Math.LN2;
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;

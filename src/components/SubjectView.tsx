@@ -11,17 +11,14 @@ type Model = ReturnType<typeof calculateShadowModel>;
 interface Props {
   model: Model
   distribution: number
-  size: number
-  dist: number
-  beamAngle: number
 }
 
-export function SubjectView({ model, distribution, size, dist, beamAngle }: Props) {
+export function SubjectView({ model, distribution }: Props) {
   return (
     <div className="space-y-5 mt-2">
-      <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} distribution={distribution} />
-      <FovVisualizer rings={model.rings} distribution={distribution} />
-      <IntensityChart size={size} dist={dist} distribution={distribution} beamAngle={beamAngle} />
+      <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} />
+      <FovVisualizer rings={model.rings} />
+      <IntensityChart distribution={distribution} />
       <SkinSoftness effectiveFovRatio={model.effectiveFovRatio} textureDesc={model.textureDesc} />
       <ShadowWidths
         rings={model.rings}

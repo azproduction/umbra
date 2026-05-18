@@ -1,24 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { intensityProfileAtSurface } from '../lib/calculateShadowModel.ts';
+import { MAX_CONTRAST_STOPS } from '../lib/physics.ts';
 
 interface Props {
-  size: number
-  dist: number
   distribution: number
-  beamAngle: number
 }
 
 const GRID_LINES = 5;
 
 // Fixed vertical scale so the curve's magnitude is honest: a near-uniform
-// modifier reads as a flat line, an extreme hotspot fills the window. The
+// modifier reads as a flat line, the worst modifier fills the window. The
 // window tracks the centre peak so the curve stays in frame, but EV-per-pixel
-// is constant. 15.5 EV spans the full range from a perfect modifier to a
-// near-perfect hotspot.
-const WINDOW_EV = 15.5;
+// is constant. 1 stop = 1 EV, so the window spans the worst-case contrast
+// (MAX_CONTRAST_STOPS) plus a little margin.
+const WINDOW_EV = MAX_CONTRAST_STOPS + 1;
 const PEAK_PAD_EV = 0.5;
 
-export function IntensityChart({ size, dist, distribution, beamAngle }: Props) {
+export function IntensityChart({ distribution }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -38,7 +36,7 @@ export function IntensityChart({ size, dist, distribution, beamAngle }: Props) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const samples = intensityProfileAtSurface(size, dist, distribution, beamAngle).filter(s => s.ev > -100);
+    const samples = intensityProfileAtSurface(distribution).filter(s => s.ev > -100);
     if (samples.length < 2)
       return;
 
@@ -91,7 +89,7 @@ export function IntensityChart({ size, dist, distribution, beamAngle }: Props) {
     ctx.restore();
 
     // Five light-meter readings overlaid along the x-axis.
-    const readings = intensityProfileAtSurface(size, dist, distribution, beamAngle, 5);
+    const readings = intensityProfileAtSurface(distribution, 5);
     ctx.font = '9px monospace';
     ctx.textBaseline = 'bottom';
     readings.forEach((r, i) => {
@@ -108,7 +106,7 @@ export function IntensityChart({ size, dist, distribution, beamAngle }: Props) {
       ctx.fillStyle = 'rgba(220,220,220,0.7)';
       ctx.fillText(label, px, h - 4);
     });
-  }, [size, dist, distribution, beamAngle]);
+  }, [distribution]);
 
   return (
     <div className="space-y-2">
