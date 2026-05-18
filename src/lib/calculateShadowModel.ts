@@ -1,6 +1,6 @@
 import type { Ring } from './geometry.ts';
 import { getIntersection, getTangents, getWallY } from './geometry.ts';
-import { illuminance } from './physics.ts';
+import { illuminance, luminance } from './physics.ts';
 
 // Calibrate physics to photographer's EV scale.
 // At default settings (150 cm modifier, 150 cm to subject, 100% distribution,
@@ -217,4 +217,42 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
     falloffData,
     textureDesc,
   };
+}
+
+/**
+ * Intensity across the modifier surface, edge → centre → edge, in absolute EV.
+ *
+ * The shape is the normalised radial luminance profile (disc-average always 1),
+ * so total flux is conserved: lowering `distribution` redistributes light into a
+ * centre hotspot rather than adding it. In EV (log2) space the Gaussian profile
+ * becomes a downward parabola — flat at 100% distribution, sharper as it drops.
+ *
+ * `x` runs -1 (one edge) → 0 (centre) → 1 (other edge). The curve is anchored so
+ * a uniform modifier reads as a flat line at the subject-centre EV.
+ */
+export function intensityProfileAtSurface(
+  size: number,
+  dist: number,
+  distribution: number,
+  beamAngle: number,
+  samples = 64,
+): { x: number, ev: number }[] {
+  const dFactor = distribution / 100;
+  const beamHalfRad = (Math.min(beamAngle, 179.5) / 2) * (Math.PI / 180);
+
+  const e0 = illuminance({
+    receiver: { x: dist, y: 0, z: 0 },
+    modifierR: size / 2,
+    distribution: dFactor,
+    beamHalfAngle: beamHalfRad,
+  });
+  const evBase = Math.log2(e0) + EV_CALIBRATION;
+
+  const out: { x: number, ev: number }[] = [];
+  for (let i = 0; i < samples; i++) {
+    const x = -1 + (2 * i) / (samples - 1);
+    const L = luminance(Math.abs(x), dFactor);
+    out.push({ x, ev: evBase + Math.log2(L) });
+  }
+  return out;
 }
