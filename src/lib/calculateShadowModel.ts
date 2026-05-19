@@ -1,6 +1,6 @@
 import type { Ring } from './geometry.ts';
 import { getIntersection, getTangents, getWallY } from './geometry.ts';
-import { alphaFromDistribution, illuminance, luminance } from './physics.ts';
+import { alphaFromDistribution, haloFromDistribution, illuminance, luminance } from './physics.ts';
 
 // Calibrate physics to photographer's EV scale.
 // At default settings (150 cm modifier, 150 cm to subject, 100% distribution,
@@ -38,10 +38,11 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   const beamHalfRad = (safeBeamAngle / 2) * (Math.PI / 180);
 
   // The 8-ring decomposition is a level-set ("layer-cake") discretisation of the
-  // Gaussian surface luminance: ring i is the uniform disc whose radius is where the
+  // surface luminance: ring i is the uniform disc whose radius is where the
   // cumulative luminance staircase reaches level Λ_i. One source of truth — the same
-  // Gaussian used by physics.luminance().
+  // profile as physics.luminance(): a Gaussian core on a uniform `halo` floor.
   const alpha = alphaFromDistribution(dFactor);
+  const halo = haloFromDistribution(dFactor);
   const lEdge = luminance(1, dFactor);
   const lCenter = luminance(0, dFactor);
   const lSpan = lCenter - lEdge;
@@ -63,9 +64,11 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   for (let i = 0; i < 8; i++) {
     const lambda = lEdge + (i / 8) * lSpan;
     const delta = i === 0 ? lEdge : lSpan / 8;
-    const rNorm = alpha < 1e-4
+    // Invert L(r) = λ for the Gaussian-on-halo profile: levels at or below the
+    // halo floor are reached everywhere (rNorm=1); above it the core decides.
+    const rNorm = alpha < 1e-4 || lambda <= halo
       ? 1
-      : Math.min(1, Math.sqrt(Math.max(0, Math.log(lCenter / lambda)) / alpha));
+      : Math.min(1, Math.sqrt(Math.max(0, Math.log((lCenter - halo) / (lambda - halo))) / alpha));
     const ringSize = Math.max(1, size * rNorm);
     const halfSize = ringSize / 2;
     const perceptualWeight = delta * rNorm * rNorm;
@@ -226,15 +229,16 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
 // Absolute EV of the modifier's disc-average surface luminance. The profile is a
 // property of the modifier surface alone, so it does not depend on subject distance
 // or modifier size — only on `distribution`.
-const SURFACE_REFERENCE_EV = 15;
+export const SURFACE_REFERENCE_EV = 15;
 
 /**
  * Intensity across the modifier surface, edge → centre → edge, in absolute EV.
  *
  * The shape is the normalised radial luminance profile (disc-average always 1),
  * so total flux is conserved: lowering `distribution` redistributes light into a
- * centre hotspot rather than adding it. In EV (log2) space the Gaussian profile
- * becomes a downward parabola — flat at 100% distribution, sharper as it drops.
+ * centre hotspot rather than adding it. In EV (log2) space the profile is a
+ * downward parabola — flat at 100% distribution, sharper as it drops, bottoming
+ * out on the faint halo floor once the spike has collapsed.
  *
  * `x` runs -1 (one edge) → 0 (centre) → 1 (other edge). The disc-average reads
  * SURFACE_REFERENCE_EV, so a uniform modifier is a flat line at that EV.

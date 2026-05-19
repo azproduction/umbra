@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alphaFromDistribution, illuminance, luminance, MAX_CONTRAST_STOPS } from './physics.ts';
+import { alphaFromDistribution, illuminance, luminance, SPIKE_RADIUS_RATIO } from './physics.ts';
 
 describe('luminance', () => {
   it('is uniform when distribution=1', () => {
@@ -8,12 +8,21 @@ describe('luminance', () => {
     expect(luminance(1, 1)).toBeCloseTo(1, 6);
   });
 
-  it('peaks at the centre when distribution=0, capped at MAX_CONTRAST_STOPS edge-to-centre', () => {
-    const center = luminance(0, 0);
-    const edge = luminance(1, 0);
-    expect(center).toBeGreaterThan(1);
-    expect(edge).toBeLessThan(1);
-    expect(Math.log2(center / edge)).toBeCloseTo(MAX_CONTRAST_STOPS, 6);
+  it('collapses to a fixed-ratio central spike at distribution=0', () => {
+    expect(luminance(0, 0)).toBeGreaterThan(1);
+    // The physical anchor: at 0% the Gaussian core's 1/e radius is exactly
+    // SPIKE_RADIUS_RATIO (≈2 cm on a 100 cm modifier), i.e. α·r² = 1 there.
+    expect(alphaFromDistribution(0) * SPIKE_RADIUS_RATIO ** 2).toBeCloseTo(1, 6);
+  });
+
+  it('leaves a faint uniform halo floor at distribution=0', () => {
+    // Outside the spike, luminance collapses to the halo floor — faint, but
+    // present (a pure Gaussian would underflow to zero here).
+    const rim = luminance(1, 0);
+    expect(rim).toBeGreaterThan(0);
+    expect(rim).toBeLessThan(0.2);
+    // The halo is flat, so different rim radii read the same.
+    expect(luminance(0.9, 0)).toBeCloseTo(rim, 6);
   });
 
   it('disc-average is 1 regardless of distribution', () => {

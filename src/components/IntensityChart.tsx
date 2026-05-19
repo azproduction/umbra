@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { intensityProfileAtSurface } from '../lib/calculateShadowModel.ts';
+import { intensityProfileAtSurface, SURFACE_REFERENCE_EV } from '../lib/calculateShadowModel.ts';
 
 interface Props {
   distribution: number
@@ -7,13 +7,16 @@ interface Props {
 
 const GRID_LINES = 5;
 
-// Fixed, absolute vertical scale. The worst modifier (0% distribution) defines
-// the EV extremes; every curve is drawn against this same range, so a given EV
-// always maps to the same height — a lower EV always sits closer to the x-axis.
+// Fixed, absolute vertical scale. The worst modifier (0% distribution) is a
+// point-light spike: its peak EV sets the top of the scale. Its edges fall away
+// to (numerically) -∞, so rather than anchor the floor to a meaningless extreme,
+// the scale is mirrored around the disc-average reference — a uniform modifier
+// sits mid-chart, and the steep edges of a spiked profile simply clip off the
+// bottom. Every curve is drawn against this same range, so a given EV always
+// maps to the same height.
 const EV_MARGIN = 0.5;
-const worstCaseEv = intensityProfileAtSurface(0).map(s => s.ev);
-const EV_CEIL = Math.max(...worstCaseEv) + EV_MARGIN;
-const EV_FLOOR = Math.min(...worstCaseEv) - EV_MARGIN;
+const EV_CEIL = Math.max(...intensityProfileAtSurface(0).map(s => s.ev)) + EV_MARGIN;
+const EV_FLOOR = SURFACE_REFERENCE_EV - (EV_CEIL - SURFACE_REFERENCE_EV);
 
 export function IntensityChart({ distribution }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,14 +38,16 @@ export function IntensityChart({ distribution }: Props) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const samples = intensityProfileAtSurface(distribution).filter(s => s.ev > -100);
+    const samples = intensityProfileAtSurface(distribution);
     if (samples.length < 2)
       return;
 
     const evTop = EV_CEIL;
     const evBot = EV_FLOOR;
 
-    const evToY = (ev: number) => h - ((ev - evBot) / (evTop - evBot)) * h;
+    // Clamp below the floor (a spiked profile's edges run to -∞) so coordinates
+    // stay finite; the clip rect then trims the curve at the chart boundary.
+    const evToY = (ev: number) => h - ((Math.max(ev, evBot - 5) - evBot) / (evTop - evBot)) * h;
     const sampleToX = (x: number) => ((x + 1) / 2) * w;
 
     // Faint horizontal gridlines behind the curve.
@@ -92,7 +97,9 @@ export function IntensityChart({ distribution }: Props) {
     ctx.textBaseline = 'bottom';
     readings.forEach((r, i) => {
       const px = sampleToX(r.x);
-      const label = r.ev.toFixed(1);
+      // A spiked surface reads (numerically) -∞ at the rim; show the floor as
+      // the lowest meaningful reading rather than an absurd number.
+      const label = Math.max(r.ev, EV_FLOOR).toFixed(1);
       const align = i === 0 ? 'left' : i === readings.length - 1 ? 'right' : 'center';
       ctx.textAlign = align;
       const tw = ctx.measureText(label).width;
