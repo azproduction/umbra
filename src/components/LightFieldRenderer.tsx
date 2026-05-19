@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ALPHA_MAX } from '../lib/physics.ts';
+import { alphaFromDistribution } from '../lib/physics.ts';
 
 const vsSource = `#version 300 es
 in vec2 a_position;
@@ -22,17 +22,17 @@ uniform float u_xMin;
 uniform float u_yMin;
 uniform float u_halfBeamRad;
 uniform float u_exposure;
-uniform float u_distribution;
+uniform float u_alpha;
 uniform float u_lightPower;
 uniform int u_samples;
 
 out vec4 outColor;
 
+// u_alpha is alphaFromDistribution() computed on the JS side — single source of truth.
 float luminanceL(float rNorm) {
-    float alpha = ${ALPHA_MAX} * (1.0 - clamp(u_distribution, 0.0, 1.0)); // ALPHA_MAX, injected from physics.ts
-    if (alpha < 1e-4) return 1.0;
-    float norm = alpha / (1.0 - exp(-alpha));
-    return norm * exp(-alpha * rNorm * rNorm);
+    if (u_alpha < 1e-4) return 1.0;
+    float norm = u_alpha / (1.0 - exp(-u_alpha));
+    return norm * exp(-u_alpha * rNorm * rNorm);
 }
 
 void main() {
@@ -110,7 +110,7 @@ interface GLInfo {
     yMin: WebGLUniformLocation | null
     halfBeamRad: WebGLUniformLocation | null
     exposure: WebGLUniformLocation | null
-    distribution: WebGLUniformLocation | null
+    alpha: WebGLUniformLocation | null
     lightPower: WebGLUniformLocation | null
     samples: WebGLUniformLocation | null
   }
@@ -199,7 +199,7 @@ export function LightFieldRenderer({
         yMin: gl.getUniformLocation(program, 'u_yMin'),
         halfBeamRad: gl.getUniformLocation(program, 'u_halfBeamRad'),
         exposure: gl.getUniformLocation(program, 'u_exposure'),
-        distribution: gl.getUniformLocation(program, 'u_distribution'),
+        alpha: gl.getUniformLocation(program, 'u_alpha'),
         lightPower: gl.getUniformLocation(program, 'u_lightPower'),
         samples: gl.getUniformLocation(program, 'u_samples'),
       },
@@ -262,7 +262,7 @@ export function LightFieldRenderer({
       gl.uniform1f(locs.yMin, yMin);
       gl.uniform1f(locs.halfBeamRad, halfBeamRad);
       gl.uniform1f(locs.exposure, exposure);
-      gl.uniform1f(locs.distribution, distribution);
+      gl.uniform1f(locs.alpha, alphaFromDistribution(distribution));
       gl.uniform1f(locs.lightPower, 10000.0);
       gl.uniform1i(locs.samples, samples);
 

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { intensityProfileAtSurface } from '../lib/calculateShadowModel.ts';
-import { MAX_CONTRAST_STOPS } from '../lib/physics.ts';
 
 interface Props {
   distribution: number
@@ -8,13 +7,13 @@ interface Props {
 
 const GRID_LINES = 5;
 
-// Fixed vertical scale so the curve's magnitude is honest: a near-uniform
-// modifier reads as a flat line, the worst modifier fills the window. The
-// window tracks the centre peak so the curve stays in frame, but EV-per-pixel
-// is constant. 1 stop = 1 EV, so the window spans the worst-case contrast
-// (MAX_CONTRAST_STOPS) plus a little margin.
-const WINDOW_EV = MAX_CONTRAST_STOPS + 1;
-const PEAK_PAD_EV = 0.5;
+// Fixed, absolute vertical scale. The worst modifier (0% distribution) defines
+// the EV extremes; every curve is drawn against this same range, so a given EV
+// always maps to the same height — a lower EV always sits closer to the x-axis.
+const EV_MARGIN = 0.5;
+const worstCaseEv = intensityProfileAtSurface(0).map(s => s.ev);
+const EV_CEIL = Math.max(...worstCaseEv) + EV_MARGIN;
+const EV_FLOOR = Math.min(...worstCaseEv) - EV_MARGIN;
 
 export function IntensityChart({ distribution }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,9 +39,8 @@ export function IntensityChart({ distribution }: Props) {
     if (samples.length < 2)
       return;
 
-    const peak = Math.max(...samples.map(s => s.ev));
-    const evTop = peak + PEAK_PAD_EV;
-    const evBot = evTop - WINDOW_EV;
+    const evTop = EV_CEIL;
+    const evBot = EV_FLOOR;
 
     const evToY = (ev: number) => h - ((ev - evBot) / (evTop - evBot)) * h;
     const sampleToX = (x: number) => ((x + 1) / 2) * w;
@@ -111,7 +109,7 @@ export function IntensityChart({ distribution }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-end">
-        <label className="text-sm text-gray-300">Surface Distribution</label>
+        <label className="text-sm text-gray-300">Surface Intensity</label>
         <span className="text-[10px] text-gray-400 uppercase tracking-wider">EV, Absolute</span>
       </div>
       <div className="w-full h-24 bg-[#0a0a0a] border border-gray-700 rounded-lg relative overflow-hidden shadow-inner">

@@ -12,17 +12,32 @@
 // Single source of truth for peak sharpness: the edge-to-centre luminance contrast
 // of the worst modifier (distribution=0), in photographic stops. Every consumer
 // (the GLSL shader, the intensity chart, tests) derives from this — change it here only.
-export const MAX_CONTRAST_STOPS = 8;
+export const MAX_CONTRAST_STOPS = 14;
 
 // stops = ALPHA_MAX / ln2, so ALPHA_MAX = stops · ln2.
-export const ALPHA_MAX = MAX_CONTRAST_STOPS * Math.LN2;
+const ALPHA_MAX = MAX_CONTRAST_STOPS * Math.LN2;
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
+// Distribution → collapse curve. A correctly-installed modifier (high distribution)
+// degrades only gently; below FAILURE_POINT the light quality falls off a cliff,
+// modelling a misused modifier — e.g. a bulb pointing out of a bounce umbrella.
+const FAILURE_POINT = 0.2; // slider fraction where misuse begins
+const FAILURE_COLLAPSE = 0.3; // collapse fraction reached at FAILURE_POINT
+
+function collapseFromDistribution(d: number): number {
+  if (d >= FAILURE_POINT) {
+    // Gentle slope: no collapse at d=1 → FAILURE_COLLAPSE at the failure point.
+    return FAILURE_COLLAPSE * (1 - d) / (1 - FAILURE_POINT);
+  }
+  // Cliff: FAILURE_COLLAPSE at the failure point → full collapse at d=0.
+  return FAILURE_COLLAPSE + (1 - FAILURE_COLLAPSE) * (FAILURE_POINT - d) / FAILURE_POINT;
+}
+
 export function alphaFromDistribution(distribution: number): number {
-  return ALPHA_MAX * (1 - clamp01(distribution));
+  return ALPHA_MAX * collapseFromDistribution(clamp01(distribution));
 }
 
 /**
