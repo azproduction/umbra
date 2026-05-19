@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { alphaFromDistribution, haloFromDistribution } from '../lib/physics.ts';
 
 const vsSource = `#version 300 es
 in vec2 a_position;
@@ -21,17 +22,19 @@ uniform float u_xMin;
 uniform float u_yMin;
 uniform float u_halfBeamRad;
 uniform float u_exposure;
-uniform float u_distribution;
+uniform float u_alpha;
+uniform float u_halo;
 uniform float u_lightPower;
 uniform int u_samples;
 
 out vec4 outColor;
 
+// u_alpha / u_halo are alphaFromDistribution() / haloFromDistribution() computed
+// on the JS side — single source of truth. A Gaussian core on a uniform halo floor.
 float luminanceL(float rNorm) {
-    float alpha = 10.0 * (1.0 - clamp(u_distribution, 0.0, 1.0));
-    if (alpha < 1e-4) return 1.0;
-    float norm = alpha / (1.0 - exp(-alpha));
-    return norm * exp(-alpha * rNorm * rNorm);
+    if (u_alpha < 1e-4) return 1.0;
+    float norm = u_alpha / (1.0 - exp(-u_alpha));
+    return u_halo + (1.0 - u_halo) * norm * exp(-u_alpha * rNorm * rNorm);
 }
 
 void main() {
@@ -109,7 +112,8 @@ interface GLInfo {
     yMin: WebGLUniformLocation | null
     halfBeamRad: WebGLUniformLocation | null
     exposure: WebGLUniformLocation | null
-    distribution: WebGLUniformLocation | null
+    alpha: WebGLUniformLocation | null
+    halo: WebGLUniformLocation | null
     lightPower: WebGLUniformLocation | null
     samples: WebGLUniformLocation | null
   }
@@ -198,7 +202,8 @@ export function LightFieldRenderer({
         yMin: gl.getUniformLocation(program, 'u_yMin'),
         halfBeamRad: gl.getUniformLocation(program, 'u_halfBeamRad'),
         exposure: gl.getUniformLocation(program, 'u_exposure'),
-        distribution: gl.getUniformLocation(program, 'u_distribution'),
+        alpha: gl.getUniformLocation(program, 'u_alpha'),
+        halo: gl.getUniformLocation(program, 'u_halo'),
         lightPower: gl.getUniformLocation(program, 'u_lightPower'),
         samples: gl.getUniformLocation(program, 'u_samples'),
       },
@@ -261,7 +266,8 @@ export function LightFieldRenderer({
       gl.uniform1f(locs.yMin, yMin);
       gl.uniform1f(locs.halfBeamRad, halfBeamRad);
       gl.uniform1f(locs.exposure, exposure);
-      gl.uniform1f(locs.distribution, distribution);
+      gl.uniform1f(locs.alpha, alphaFromDistribution(distribution));
+      gl.uniform1f(locs.halo, haloFromDistribution(distribution));
       gl.uniform1f(locs.lightPower, 10000.0);
       gl.uniform1i(locs.samples, samples);
 

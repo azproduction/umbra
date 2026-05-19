@@ -2,6 +2,7 @@ import type { calculateShadowModel } from '../lib/calculateShadowModel.ts';
 import { CatchlightIndicator } from './CatchlightIndicator';
 import { Falloff } from './Falloff';
 import { FovVisualizer } from './FovVisualizer';
+import { IntensityChart } from './IntensityChart';
 import { ShadowWidths } from './ShadowWidths';
 import { SkinSoftness } from './SkinSoftness';
 
@@ -15,8 +16,9 @@ interface Props {
 export function SubjectView({ model, distribution }: Props) {
   return (
     <div className="space-y-5 mt-2">
-      <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} distribution={distribution} />
-      <FovVisualizer rings={model.rings} distribution={distribution} />
+      <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} />
+      <FovVisualizer rings={model.rings} />
+      <IntensityChart distribution={distribution} />
       <SkinSoftness effectiveFovRatio={model.effectiveFovRatio} textureDesc={model.textureDesc} />
       <ShadowWidths
         rings={model.rings}

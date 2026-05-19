@@ -9,26 +9,87 @@
 //   - illuminance() returns the disc-averaged value of L·cos(θ)/d², matching
 //     what the shader computes pre-`lightPower` scaling.
 
-const ALPHA_MAX = 10;
+// The physical property that defines the worst case is the *size* of the bright
+// core, not its contrast. At 0% distribution the modifier collapses to a central
+// spike whose Gaussian 1/e radius is SPIKE_RADIUS_RATIO of the modifier radius —
+// roughly a 2 cm core on a 100 cm modifier, i.e. effectively a point light. The
+// edge-to-centre contrast is then whatever this geometry implies; it is a result,
+// not a target. Every consumer (GLSL shader, intensity chart, tests) derives from
+// this — change it here only.
+export const SPIKE_RADIUS_RATIO = 0.02;
+
+// Gaussian sharpness with a 1/e radius of SPIKE_RADIUS_RATIO: α·r² = 1 at
+// r = SPIKE_RADIUS_RATIO, so α = 1 / SPIKE_RADIUS_RATIO².
+const ALPHA_SPIKE = 1 / (SPIKE_RADIUS_RATIO * SPIKE_RADIUS_RATIO);
+
+// Sharpness at the failure point — a mediocre but still extended source
+// (1/e radius ≈ 1/√ALPHA_FAIL ≈ 0.29 of the modifier radius).
+const ALPHA_FAIL = 12;
+
+// Slider fraction where a misused modifier starts to fail. Above it the surface
+// degrades gently from uniform; below it sharpness climbs steeply to a point light.
+const FAILURE_POINT = 0.2;
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
+/**
+ * Gaussian sharpness α of the surface luminance for a given distribution.
+ *
+ * A correctly-used modifier (high distribution) degrades only gently; below
+ * FAILURE_POINT the light quality falls off a cliff, modelling a misused
+ * modifier — e.g. a bulb pointing out of a bounce umbrella.
+ *
+ *   d ≥ FAILURE_POINT: gentle linear ease from α=0 (uniform, d=1) to ALPHA_FAIL.
+ *   d < FAILURE_POINT: geometric cliff from ALPHA_FAIL up to ALPHA_SPIKE at d=0,
+ *     where the modifier behaves as a ~2 cm point light. Continuous at FAILURE_POINT.
+ */
 export function alphaFromDistribution(distribution: number): number {
-  return ALPHA_MAX * (1 - clamp01(distribution));
+  const d = clamp01(distribution);
+  if (d >= FAILURE_POINT) {
+    return ALPHA_FAIL * (1 - d) / (1 - FAILURE_POINT);
+  }
+  const t = (FAILURE_POINT - d) / FAILURE_POINT;
+  return ALPHA_FAIL * (ALPHA_SPIKE / ALPHA_FAIL) ** t;
+}
+
+// Flux fraction held back from the spike as a broad, near-uniform halo at 0%
+// distribution — the faint surround of the collapsed core. A single Gaussian
+// conserving flux into a 2 cm spike leaves nothing for the surroundings; this
+// pedestal explicitly reserves a slice so the halo physically exists.
+const HALO_FLUX = 0.03;
+
+/**
+ * Flux fraction in the uniform halo floor for a given distribution.
+ *
+ * Zero above FAILURE_POINT (the modifier is a pure Gaussian there) and ramps
+ * linearly to HALO_FLUX at d=0, so the halo is purely a feature of the
+ * misuse collapse and never disturbs a correctly-used modifier.
+ */
+export function haloFromDistribution(distribution: number): number {
+  const d = clamp01(distribution);
+  if (d >= FAILURE_POINT) {
+    return 0;
+  }
+  return HALO_FLUX * (FAILURE_POINT - d) / FAILURE_POINT;
 }
 
 /**
  * Normalised radial luminance: L(r/R, distribution).
- * Gaussian profile, average over the unit disc is exactly 1 for any distribution.
+ *
+ * A Gaussian core sitting on a uniform halo floor: the core carries (1-halo)
+ * of the flux, the halo carries `halo`. Both components are individually
+ * disc-average-normalised, so the total disc-average is exactly 1 for any
+ * distribution. With halo=0 this is a plain Gaussian.
  */
 export function luminance(rNorm: number, distribution: number): number {
   const alpha = alphaFromDistribution(distribution);
   if (alpha < 1e-4)
     return 1;
+  const halo = haloFromDistribution(distribution);
   const norm = alpha / (1 - Math.exp(-alpha));
-  return norm * Math.exp(-alpha * rNorm * rNorm);
+  return halo + (1 - halo) * norm * Math.exp(-alpha * rNorm * rNorm);
 }
 
 interface Vec3 { x: number, y: number, z: number }

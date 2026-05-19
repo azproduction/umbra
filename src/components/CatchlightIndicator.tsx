@@ -1,15 +1,12 @@
 import type { Ring } from '../lib/geometry.ts';
-import { luminance } from '../lib/physics.ts';
 
 interface Props {
   rings: Ring[]
   effectiveAngleDeg: number
-  distribution: number
 }
 
-export function CatchlightIndicator({ rings, effectiveAngleDeg, distribution }: Props) {
-  const dist = distribution / 100;
-  const weights = rings.map(r => luminance((r.ringIndex + 0.5) / 8, dist));
+export function CatchlightIndicator({ rings, effectiveAngleDeg }: Props) {
+  const weights = rings.map(r => r.perceptualWeight);
   const maxWeight = Math.max(...weights, 1e-6);
 
   return (

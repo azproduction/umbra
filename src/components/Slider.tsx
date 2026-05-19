@@ -1,6 +1,7 @@
 interface SliderProps {
   label: string
   value: number
+  defaultValue: number
   min: number
   max: number
   step?: number
@@ -8,11 +9,12 @@ interface SliderProps {
   onChange: (value: number) => void
 }
 
-export function Slider({ label, value, min, max, unit, step, onChange }: SliderProps) {
+export function Slider({ label, value, defaultValue, min, max, unit, step, onChange }: SliderProps) {
+  const reset = () => onChange(defaultValue);
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onDoubleClick={reset}>
       <div className="flex justify-between">
-        <label className="text-sm text-gray-300">{label}</label>
+        <label className="text-sm text-gray-300 cursor-pointer select-none" title="Double-click to reset">{label}</label>
         <span className="text-sm font-mono text-white">
           {value}
           {unit}
