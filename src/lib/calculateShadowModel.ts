@@ -2,16 +2,34 @@ import type { Ring } from './geometry.ts';
 import { getIntersection, getTangents, getWallY } from './geometry.ts';
 import { alphaFromDistribution, haloFromDistribution, illuminance, luminance } from './physics.ts';
 
+// Sample counts for the falloff irradiance integral. The default Gaussian-on-halo
+// surface collapses to a ~2 cm spike at 0% distribution; with 16 radial samples
+// the spike falls between rings and the Riemann sum misses ~97% of its energy.
+// 256 radial puts ~10 samples inside the 1/e core radius, which converges to
+// within ~0.004 stops of the analytical value.
+const FALLOFF_RADIAL_SAMPLES = 256;
+const FALLOFF_ANGULAR_SAMPLES = 64;
+
+// True on-axis irradiance from the modifier disc, in absolute physical units.
+// illuminance() returns the *disc-averaged* form ∫∫L·cosθ/d² dA / πR², so we
+// multiply back by πR² to recover the irradiance the receiver actually sees —
+// otherwise the modifier area normalises out and a bigger softbox reads the
+// same EV as a smaller one at the same distance.
+function irradianceAt(x: number, modifierR: number, distribution: number, beamHalfAngle: number): number {
+  return illuminance({
+    receiver: { x, y: 0, z: 0 },
+    modifierR,
+    distribution,
+    beamHalfAngle,
+    radialSamples: FALLOFF_RADIAL_SAMPLES,
+    angularSamples: FALLOFF_ANGULAR_SAMPLES,
+  }) * Math.PI * modifierR * modifierR;
+}
+
 // Calibrate physics to photographer's EV scale.
 // At default settings (150 cm modifier, 150 cm to subject, 100% distribution,
-// 180° beam) the on-axis illuminance maps to EV 15 (sunny-day exposure).
-const _refIlluminance = illuminance({
-  receiver: { x: 150, y: 0, z: 0 },
-  modifierR: 75,
-  distribution: 1,
-  beamHalfAngle: Math.PI / 2,
-});
-const EV_CALIBRATION = 15 - Math.log2(_refIlluminance);
+// 180° beam) the on-axis irradiance maps to EV 15 (sunny-day exposure).
+const EV_CALIBRATION = 15 - Math.log2(irradianceAt(150, 75, 1, Math.PI / 2));
 
 /**
  * @param size         Diameter of the light source (centimeters)
@@ -176,12 +194,7 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   const getEVAtDistance = (x: number): number | null => {
     if (x <= 0)
       return null;
-    const e = illuminance({
-      receiver: { x, y: 0, z: 0 },
-      modifierR: size / 2,
-      distribution: dFactor,
-      beamHalfAngle: beamHalfRad,
-    });
+    const e = irradianceAt(x, size / 2, dFactor, beamHalfRad);
     if (e < 1e-30)
       return null;
     return Math.log2(e) + EV_CALIBRATION;
@@ -226,22 +239,26 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   };
 }
 
-// Absolute EV of the modifier's disc-average surface luminance. The profile is a
-// property of the modifier surface alone, so it does not depend on subject distance
-// or modifier size — only on `distribution`.
-export const SURFACE_REFERENCE_EV = 15;
+// EV a hemisphere incident meter reads at the modifier surface for a uniform
+// (100% distribution) disc — the natural anchor of the surface scan and the
+// d→0⁺ continuation of the falloff curve. See intensityProfileAtSurface below.
+export const SURFACE_UNIFORM_EV = Math.log2(2 * Math.PI) + EV_CALIBRATION;
 
 /**
- * Intensity across the modifier surface, edge → centre → edge, in absolute EV.
+ * Surface-meter EV across the modifier face, edge → centre → edge.
  *
- * The shape is the normalised radial luminance profile (disc-average always 1),
- * so total flux is conserved: lowering `distribution` redistributes light into a
- * centre hotspot rather than adding it. In EV (log2) space the profile is a
- * downward parabola — flat at 100% distribution, sharper as it drops, bottoming
- * out on the faint halo floor once the spike has collapsed.
+ * Models the same hemispheric incident meter the Light Falloff widget uses,
+ * but placed at the modifier surface itself. In the touching-the-surface limit
+ * (ε → 0⁺) the integral ∫∫L·cosθ/d² dA is dominated by the local singularity
+ * directly under the meter, collapsing to `2π · L(y/R)` — the no-receiver-
+ * cosine convention shared with illuminance(), so the surface reading at y=0
+ * is the d→0⁺ continuation of the on-axis falloff curve on the same EV scale.
  *
- * `x` runs -1 (one edge) → 0 (centre) → 1 (other edge). The disc-average reads
- * SURFACE_REFERENCE_EV, so a uniform modifier is a flat line at that EV.
+ * `x` runs -1 (one edge) → 0 (centre) → 1 (other edge). At distribution=100%
+ * the profile is flat at SURFACE_UNIFORM_EV ≈ EV_CALIBRATION + 2.65 stops,
+ * sitting above the brightest falloff reading. Lower distributions redistribute
+ * the same total flux into a centre spike, so the chart's centre rises and
+ * its edges drop to the halo floor.
  */
 export function intensityProfileAtSurface(
   distribution: number,
@@ -253,7 +270,7 @@ export function intensityProfileAtSurface(
   for (let i = 0; i < samples; i++) {
     const x = -1 + (2 * i) / (samples - 1);
     const L = luminance(Math.abs(x), dFactor);
-    out.push({ x, ev: SURFACE_REFERENCE_EV + Math.log2(L) });
+    out.push({ x, ev: Math.log2(2 * Math.PI * L) + EV_CALIBRATION });
   }
   return out;
 }

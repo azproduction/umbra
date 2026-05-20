@@ -18,7 +18,6 @@ export function SubjectView({ model, distribution }: Props) {
     <div className="space-y-5 mt-2">
       <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} />
       <FovVisualizer rings={model.rings} />
-      <IntensityChart distribution={distribution} />
       <SkinSoftness effectiveFovRatio={model.effectiveFovRatio} textureDesc={model.textureDesc} />
       <ShadowWidths
         rings={model.rings}
@@ -28,6 +27,7 @@ export function SubjectView({ model, distribution }: Props) {
         effectiveRightW={model.effectiveRightW}
         dominantIsAntumbra={model.dominantIsAntumbra}
       />
+      <IntensityChart distribution={distribution} />
       <Falloff falloffData={model.falloffData} />
     </div>
   );

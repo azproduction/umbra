@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { intensityProfileAtSurface, SURFACE_REFERENCE_EV } from '../lib/calculateShadowModel.ts';
+import { intensityProfileAtSurface, SURFACE_UNIFORM_EV } from '../lib/calculateShadowModel.ts';
 
 interface Props {
   distribution: number
@@ -10,13 +10,13 @@ const GRID_LINES = 5;
 // Fixed, absolute vertical scale. The worst modifier (0% distribution) is a
 // point-light spike: its peak EV sets the top of the scale. Its edges fall away
 // to (numerically) -∞, so rather than anchor the floor to a meaningless extreme,
-// the scale is mirrored around the disc-average reference — a uniform modifier
+// the scale is mirrored around the uniform-modifier reading — a uniform modifier
 // sits mid-chart, and the steep edges of a spiked profile simply clip off the
 // bottom. Every curve is drawn against this same range, so a given EV always
 // maps to the same height.
 const EV_MARGIN = 0.5;
 const EV_CEIL = Math.max(...intensityProfileAtSurface(0).map(s => s.ev)) + EV_MARGIN;
-const EV_FLOOR = SURFACE_REFERENCE_EV - (EV_CEIL - SURFACE_REFERENCE_EV);
+const EV_FLOOR = SURFACE_UNIFORM_EV - (EV_CEIL - SURFACE_UNIFORM_EV);
 
 export function IntensityChart({ distribution }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
