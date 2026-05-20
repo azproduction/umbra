@@ -6,8 +6,10 @@
 //   - distribution ∈ [0, 1]: 1 = uniform luminance, 0 = sharply peaked centre.
 //   - L(r/R, distribution) is normalised so the disc-average is always 1; total
 //     flux therefore scales with R² (fixed-luminance interpretation).
-//   - illuminance() returns the disc-averaged value of L·cos(θ)/d², matching
-//     what the shader computes pre-`lightPower` scaling.
+//   - illuminance() returns the disc-averaged value of L·cos(θ_s)·cos(θ_r)/d² —
+//     the integrand of a cosine-corrected incident meter (Sekonic-style dome)
+//     whose normal points back toward the modifier. The same formula lives in
+//     the shader pre-`lightPower` scaling; keep both sides in sync.
 
 // The physical property that defines the worst case is the *size* of the bright
 // core, not its contrast. At 0% distribution the modifier collapses to a central
@@ -109,8 +111,11 @@ interface IlluminanceParams {
  * Disc-averaged irradiance at `receiver` from a round Lambertian source of
  * radius `modifierR` centred at the origin in the plane x=0 with normal +x.
  *
- * Formally returns (1/πR²) · ∫∫ L(r/R) · cos(θ) / d² dA over the disc, where
- * elements outside the beam cone or occluded by `occluder` contribute zero.
+ * Formally returns (1/πR²) · ∫∫ L(r/R) · cos(θ_s) · cos(θ_r) / d² dA over the
+ * disc, with the receiver normal taken to point back toward the modifier
+ * (i.e. −x for receivers on the +x side). Both cosines reduce to dx/dist along
+ * the optical axis, so the integrand is cos² there. Elements outside the beam
+ * cone or occluded by `occluder` contribute zero.
  *
  * 2D Riemann sum in polar coordinates with midpoint sampling.
  */
@@ -169,7 +174,7 @@ export function illuminance({
         }
       }
 
-      sum += L * cosTheta / distSq * rs;
+      sum += L * cosTheta * cosTheta / distSq * rs;
     }
   }
 

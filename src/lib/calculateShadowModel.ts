@@ -239,26 +239,27 @@ export function calculateShadowModel(size: number, dist: number, distribution: n
   };
 }
 
-// EV a hemisphere incident meter reads at the modifier surface for a uniform
-// (100% distribution) disc — the natural anchor of the surface scan and the
-// d→0⁺ continuation of the falloff curve. See intensityProfileAtSurface below.
-export const SURFACE_UNIFORM_EV = Math.log2(2 * Math.PI) + EV_CALIBRATION;
+// EV a cosine-corrected incident meter reads at the modifier surface for a
+// uniform (100% distribution) disc — the natural anchor of the surface scan
+// and the d→0⁺ continuation of the falloff curve. See intensityProfileAtSurface.
+export const SURFACE_UNIFORM_EV = Math.log2(Math.PI) + EV_CALIBRATION;
 
 /**
  * Surface-meter EV across the modifier face, edge → centre → edge.
  *
- * Models the same hemispheric incident meter the Light Falloff widget uses,
- * but placed at the modifier surface itself. In the touching-the-surface limit
- * (ε → 0⁺) the integral ∫∫L·cosθ/d² dA is dominated by the local singularity
- * directly under the meter, collapsing to `2π · L(y/R)` — the no-receiver-
- * cosine convention shared with illuminance(), so the surface reading at y=0
- * is the d→0⁺ continuation of the on-axis falloff curve on the same EV scale.
+ * Models the same cosine-corrected incident meter the Light Falloff widget
+ * uses, placed at the modifier surface itself. In the touching-the-surface
+ * limit (ε → 0⁺) the integral ∫∫L·cos(θ_s)·cos(θ_r)/d² dA is dominated by the
+ * local singularity directly under the meter and collapses to `π · L(y/R)` —
+ * the radiosity of a Lambertian patch (M = πL), which is exactly what a meter
+ * pressed against the surface reads.
  *
  * `x` runs -1 (one edge) → 0 (centre) → 1 (other edge). At distribution=100%
- * the profile is flat at SURFACE_UNIFORM_EV ≈ EV_CALIBRATION + 2.65 stops,
- * sitting above the brightest falloff reading. Lower distributions redistribute
- * the same total flux into a centre spike, so the chart's centre rises and
- * its edges drop to the halo floor.
+ * the profile is flat at SURFACE_UNIFORM_EV ≈ EV_CALIBRATION + log₂(π) ≈
+ * +1.65 stops above the calibration reading, sitting above the brightest
+ * falloff point on the same scale. Lower distributions redistribute the same
+ * total flux into a centre spike: the chart's centre rises and its edges
+ * drop to the halo floor.
  */
 export function intensityProfileAtSurface(
   distribution: number,
@@ -270,7 +271,7 @@ export function intensityProfileAtSurface(
   for (let i = 0; i < samples; i++) {
     const x = -1 + (2 * i) / (samples - 1);
     const L = luminance(Math.abs(x), dFactor);
-    out.push({ x, ev: Math.log2(2 * Math.PI * L) + EV_CALIBRATION });
+    out.push({ x, ev: Math.log2(Math.PI * L) + EV_CALIBRATION });
   }
   return out;
 }

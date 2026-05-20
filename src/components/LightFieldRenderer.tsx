@@ -86,7 +86,8 @@ void main() {
         }
 
         if (!hit) {
-            sumIntensity += L * cosTheta / distSq;
+            // cosTheta² = cos(θ_s)·cos(θ_r); receiver normal taken toward modifier.
+            sumIntensity += L * cosTheta * cosTheta / distSq;
         }
     }
 

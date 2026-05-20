@@ -3,9 +3,11 @@ import { intensityProfileAtSurface, SURFACE_UNIFORM_EV } from '../lib/calculateS
 
 interface Props {
   distribution: number
+  size: number
 }
 
 const GRID_LINES = 5;
+const READOUT_POINTS = 5;
 
 // Fixed, absolute vertical scale. The worst modifier (0% distribution) is a
 // point-light spike: its peak EV sets the top of the scale. Its edges fall away
@@ -18,7 +20,9 @@ const EV_MARGIN = 0.5;
 const EV_CEIL = Math.max(...intensityProfileAtSurface(0).map(s => s.ev)) + EV_MARGIN;
 const EV_FLOOR = SURFACE_UNIFORM_EV - (EV_CEIL - SURFACE_UNIFORM_EV);
 
-export function IntensityChart({ distribution }: Props) {
+const POSITION_LABELS = ['L Edge', 'L Mid', 'Center', 'R Mid', 'R Edge'];
+
+export function IntensityChart({ distribution, size }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -42,15 +46,11 @@ export function IntensityChart({ distribution }: Props) {
     if (samples.length < 2)
       return;
 
-    const evTop = EV_CEIL;
-    const evBot = EV_FLOOR;
-
     // Clamp below the floor (a spiked profile's edges run to -∞) so coordinates
     // stay finite; the clip rect then trims the curve at the chart boundary.
-    const evToY = (ev: number) => h - ((Math.max(ev, evBot - 5) - evBot) / (evTop - evBot)) * h;
+    const evToY = (ev: number) => h - ((Math.max(ev, EV_FLOOR - 5) - EV_FLOOR) / (EV_CEIL - EV_FLOOR)) * h;
     const sampleToX = (x: number) => ((x + 1) / 2) * w;
 
-    // Faint horizontal gridlines behind the curve.
     for (let i = 0; i < GRID_LINES; i++) {
       const y = (i / (GRID_LINES - 1)) * h;
       ctx.strokeStyle = 'rgba(255,255,255,0.06)';
@@ -66,7 +66,6 @@ export function IntensityChart({ distribution }: Props) {
     ctx.rect(0, 0, w, h);
     ctx.clip();
 
-    // Parabola.
     ctx.beginPath();
     samples.forEach((s, i) => {
       const px = sampleToX(s.x);
@@ -76,12 +75,11 @@ export function IntensityChart({ distribution }: Props) {
       else
         ctx.lineTo(px, py);
     });
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Fill below the curve.
     const last = samples[samples.length - 1];
     ctx.lineTo(sampleToX(last.x), h);
     ctx.lineTo(sampleToX(samples[0].x), h);
@@ -90,37 +88,37 @@ export function IntensityChart({ distribution }: Props) {
     ctx.fill();
 
     ctx.restore();
-
-    // Five light-meter readings overlaid along the x-axis.
-    const readings = intensityProfileAtSurface(distribution, 5);
-    ctx.font = '9px monospace';
-    ctx.textBaseline = 'bottom';
-    readings.forEach((r, i) => {
-      const px = sampleToX(r.x);
-      // A spiked surface reads (numerically) -∞ at the rim; show the floor as
-      // the lowest meaningful reading rather than an absurd number.
-      const label = Math.max(r.ev, EV_FLOOR).toFixed(1);
-      const align = i === 0 ? 'left' : i === readings.length - 1 ? 'right' : 'center';
-      ctx.textAlign = align;
-      const tw = ctx.measureText(label).width;
-      const bx = align === 'left' ? px : align === 'right' ? px - tw : px - tw / 2;
-      ctx.fillStyle = 'rgba(10,10,10,0.6)';
-      ctx.beginPath();
-      ctx.roundRect(bx - 3, h - 16, tw + 6, 13, 3);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(220,220,220,0.7)';
-      ctx.fillText(label, px, h - 4);
-    });
   }, [distribution]);
+
+  const readings = intensityProfileAtSurface(distribution, READOUT_POINTS);
+  const R = size / 2;
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-end mb-1">
         <label className="text-sm text-gray-300">Surface Intensity</label>
         <span className="text-[10px] text-gray-400 uppercase tracking-wider">EV, Absolute</span>
       </div>
-      <div className="w-full h-24 bg-[#0a0a0a] border border-gray-700 rounded-lg relative overflow-hidden shadow-inner">
-        <canvas ref={canvasRef} className="w-full h-full block absolute inset-0" />
+      <div
+        className="w-full rounded-lg border border-gray-700 shadow-inner overflow-hidden relative px-4 py-2"
+        style={{ background: 'linear-gradient(to right, #1a1a1a, #0f0f0f)' }}
+      >
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+        <div className="relative flex justify-between">
+          {readings.map((r, i) => {
+            const cmAbs = Math.round(Math.abs(r.x) * R);
+            const cmLabel = r.x > 0 ? `+${cmAbs}cm` : r.x < 0 ? `-${cmAbs}cm` : `${cmAbs}cm`;
+            const ev = Math.max(r.ev, EV_FLOOR);
+            return (
+              <div key={POSITION_LABELS[i]} className="flex flex-col items-center gap-[6px]">
+                <div className="w-px h-2 bg-white/10" />
+                <span className="text-[9px] font-bold text-[#888] leading-none">{POSITION_LABELS[i]}</span>
+                <span className="text-[11px] font-bold font-mono text-white leading-none">{ev.toFixed(1)}</span>
+                <span className="text-[9px] font-mono text-[#555] leading-none">{cmLabel}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -11,9 +11,10 @@ type Model = ReturnType<typeof calculateShadowModel>;
 interface Props {
   model: Model
   distribution: number
+  size: number
 }
 
-export function SubjectView({ model, distribution }: Props) {
+export function SubjectView({ model, distribution, size }: Props) {
   return (
     <div className="space-y-5 mt-2">
       <CatchlightIndicator rings={model.rings} effectiveAngleDeg={model.effectiveAngleDeg} />
@@ -27,7 +28,7 @@ export function SubjectView({ model, distribution }: Props) {
         effectiveRightW={model.effectiveRightW}
         dominantIsAntumbra={model.dominantIsAntumbra}
       />
-      <IntensityChart distribution={distribution} />
+      <IntensityChart distribution={distribution} size={size} />
       <Falloff falloffData={model.falloffData} />
     </div>
   );

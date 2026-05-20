@@ -38,7 +38,7 @@ export default function App() {
 
         {/* Subject View widgets float over the canvas, no background */}
         <div className="absolute top-4 left-4 bottom-4 w-64 z-10 overflow-y-auto pointer-events-auto">
-          <SubjectView model={model} distribution={distribution} />
+          <SubjectView model={model} distribution={distribution} size={size} />
         </div>
       </div>
 

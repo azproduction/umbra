@@ -51,9 +51,11 @@ describe('illuminance', () => {
   it('matches the closed-form Lambertian disc on-axis (uniform)', () => {
     const R = 50;
     const d = 100;
-    // Closed form: E = 2π(1 - d/√(d²+R²)) for a Lambertian disc onto a
-    // surface oriented perpendicular to the source direction.
-    const expectedIntegral = 2 * Math.PI * (1 - d / Math.sqrt(d * d + R * R));
+    // Closed form: E = π · R² / (d² + R²) for a uniform Lambertian disc
+    // illuminating a flat sensor on the optical axis facing the modifier
+    // (both source and receiver cosines, the cosine-corrected incident-meter
+    // integrand).
+    const expectedIntegral = Math.PI * R * R / (d * d + R * R);
     const expectedAvg = expectedIntegral / (Math.PI * R * R);
 
     const computed = illuminance({
